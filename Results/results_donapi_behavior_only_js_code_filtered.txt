@@ -1,0 +1,50 @@
+Row filters: drop_empty_js=True, drop_empty_code=True
+Rows dropped by filters: 2524
+Rows remaining: 11534
+
+Filter mode: behavior_only
+Number of features: 92
+
+Classification report:
+              precision    recall  f1-score   support
+
+      benign     0.9478    0.7415    0.8321       147
+   malicious     0.9765    0.9962    0.9862      1584
+
+    accuracy                         0.9746      1731
+   macro avg     0.9622    0.8689    0.9092      1731
+weighted avg     0.9741    0.9746    0.9732      1731
+
+ROC-AUC: 0.9959
+
+Top 30 features:
+num_lines: 0.121388
+special_char_count: 0.083381
+max_string_len: 0.082091
+identifier_entropy: 0.081905
+line_ratio: 0.071529
+avg_identifier_length: 0.070687
+space_ratio: 0.065554
+buni_NETWORK_COMM: 0.054041
+bf_net_requests: 0.049853
+num_long_strings: 0.039654
+substring_calls: 0.032637
+buni_DYNAMIC_CODE_EXEC: 0.022453
+bbi_DYNAMIC_CODE_EXEC|DYNAMIC_CODE_EXEC: 0.017669
+bbi_NETWORK_COMM|NETWORK_COMM: 0.016133
+btri_DYNAMIC_CODE_EXEC|DYNAMIC_CODE_EXEC|DYNAMIC_CODE_EXEC: 0.014345
+buni_SENSITIVE_FILE_OP: 0.011401
+buni_ENVIRONMENT_ACCESS: 0.010835
+bf_dynamic_exec: 0.010693
+bf_env_access: 0.010280
+bf_fs_ops: 0.009513
+bbi_ENVIRONMENT_ACCESS|ENVIRONMENT_ACCESS: 0.007055
+bbi_SENSITIVE_FILE_OP|SENSITIVE_FILE_OP: 0.005857
+buni_CRYPTO_USAGE: 0.005832
+btri_NETWORK_COMM|NETWORK_COMM|NETWORK_COMM: 0.005649
+btri_ENVIRONMENT_ACCESS|ENVIRONMENT_ACCESS|ENVIRONMENT_ACCESS: 0.005475
+btri_SENSITIVE_FILE_OP|SENSITIVE_FILE_OP|SENSITIVE_FILE_OP: 0.004986
+bbi_ENVIRONMENT_ACCESS|DYNAMIC_CODE_EXEC: 0.003814
+bbi_DYNAMIC_CODE_EXEC|NETWORK_COMM: 0.003599
+bbi_SENSITIVE_FILE_OP|DYNAMIC_CODE_EXEC: 0.003570
+bbi_DYNAMIC_CODE_EXEC|ENVIRONMENT_ACCESS: 0.003539
