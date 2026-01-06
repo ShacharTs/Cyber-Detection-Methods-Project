@@ -1,0 +1,15 @@
+Test file: npm_test.csv
+Num rows: 2464
+
+Classification report:
+              precision    recall  f1-score   support
+
+           0     0.9659    0.9659    0.9659      1232
+           1     0.9659    0.9659    0.9659      1232
+
+    accuracy                         0.9659      2464
+   macro avg     0.9659    0.9659    0.9659      2464
+weighted avg     0.9659    0.9659    0.9659      2464
+
+
+ROC-AUC: 0.9944
