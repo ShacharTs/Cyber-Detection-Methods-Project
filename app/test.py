@@ -13,8 +13,8 @@ from sklearn.metrics import (
 # =========================
 # Paths
 # =========================
-TEST_CSV = os.path.join("output", "npm_test.csv")
-ARTIFACT_DIR = "artifacts"
+TEST_CSV = os.path.join("../data", "npm_test.csv")
+ARTIFACT_DIR = "../artifacts"
 
 MODEL_PATH = os.path.join(ARTIFACT_DIR, "xgboost_model.pkl")
 FEATURES_PATH = os.path.join(ARTIFACT_DIR, "features.json")

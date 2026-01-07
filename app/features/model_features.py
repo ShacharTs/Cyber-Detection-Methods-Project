@@ -10,15 +10,15 @@ WEAKLINK_FEATURES_LIST = [
     "num_contributors",
     "repository_exists",
     "license_exists",
-    "inactive_package_flag",      # NEW
+    "inactive_package_flag",
 ]
 
 # =========================
 # Install / Supply-chain
 # =========================
 INSTALL_FEATURES_LIST = [
-    "has_install_script",         # NEW
-    "num_install_scripts",        # NEW
+    "has_install_script",
+    "num_install_scripts",
 ]
 
 # =========================
@@ -45,8 +45,8 @@ BUNI_FEATURES_LIST = [
 # Static / Obfuscation
 # =========================
 STATIC_FEATURES_LIST = [
-    "identifier_entropy",         # NEW
-    "num_lines",                  # NEW
+    "identifier_entropy",
+    "num_lines",
 ]
 
 # =========================

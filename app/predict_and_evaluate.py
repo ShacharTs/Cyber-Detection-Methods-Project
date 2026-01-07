@@ -13,13 +13,13 @@ from sklearn.metrics import (
 # =========================
 # Paths
 # =========================
-MODEL_PATH = os.path.join("artifacts", "xgboost_model.pkl")
-FEATURES_PATH = os.path.join("artifacts", "features.json")
+MODEL_PATH = os.path.join("../artifacts", "xgboost_model.pkl")
+FEATURES_PATH = os.path.join("../artifacts", "features.json")
 
-FEATURES_CSV = os.path.join("output", "npm_val_without_labels.csv")
-LABELS_CSV   = os.path.join("output", "npm_val_with_label.csv")
+FEATURES_CSV = os.path.join("../data", "npm_val_without_labels.csv")
+LABELS_CSV   = os.path.join("../data", "npm_val_with_label.csv")
 
-OUT_DIR = "evaluation_results"
+OUT_DIR = "../evaluation_results"
 OUT_CSV = os.path.join(OUT_DIR, "val_predictions_with_metrics.csv")
 
 LABEL_CANDIDATES = {
@@ -99,7 +99,7 @@ def main():
     print(f"ROC-AUC  : {auc:.4f}")
 
     # -------------------------
-    # Save combined output
+    # Save combined data
     # -------------------------
     out_df = X_df.copy()
     out_df["true_label"] = y_true
@@ -108,7 +108,7 @@ def main():
 
     out_df.to_csv(OUT_CSV, index=False)
 
-    print(f"\n[+] Full evaluation output saved to: {OUT_CSV}")
+    print(f"\n[+] Full evaluation data saved to: {OUT_CSV}")
 
 
 if __name__ == "__main__":

@@ -1,31 +1,35 @@
-# train_all_models.py
 import os
 import json
 import joblib
 import pandas as pd
+from pathlib import Path
 
-from features import ALL_FEATURES
-from model import build_xgboost
+from app.features.model_features import ALL_FEATURES
+from app.models.model import build_xgboost
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, roc_auc_score, classification_report
 
 
 # =========================
-# Paths
+# Paths (FIXED)
 # =========================
-INPUT_CSV = os.path.join("output", "npm_train.csv")
-ARTIFACT_DIR = "artifacts"
+BASE_DIR = Path(__file__).resolve().parents[2]
+DATA_DIR = BASE_DIR / "data"
+ARTIFACT_DIR = BASE_DIR / "artifacts"
+
+INPUT_CSV = DATA_DIR / "npm_train.csv"
 
 
 def main():
     # -------------------------
     # Load data
     # -------------------------
-    if not os.path.exists(INPUT_CSV):
+    if not INPUT_CSV.exists():
         raise FileNotFoundError(INPUT_CSV)
 
-    os.makedirs(ARTIFACT_DIR, exist_ok=True)
+    ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+
     df = pd.read_csv(INPUT_CSV)
 
     X = df[ALL_FEATURES]
@@ -63,9 +67,9 @@ def main():
     # -------------------------
     # Save artifacts
     # -------------------------
-    joblib.dump(model, os.path.join(ARTIFACT_DIR, "xgboost_model.pkl"))
+    joblib.dump(model, ARTIFACT_DIR / "xgboost_model.pkl")
 
-    with open(os.path.join(ARTIFACT_DIR, "features.json"), "w") as f:
+    with open(ARTIFACT_DIR / "features.json", "w") as f:
         json.dump(ALL_FEATURES, f, indent=2)
 
     print("\n[+] Model and features saved to artifacts/")
