@@ -4,17 +4,19 @@ from sklearn.ensemble import RandomForestClassifier
 
 def build_xgboost():
     return xgb.XGBClassifier(
-        n_estimators=500,
-        max_depth=5,
-        learning_rate=0.05,
-        subsample=0.9,
-        colsample_bytree=0.9,
+        n_estimators=600,
+        max_depth=6,
+        learning_rate=0.07,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        min_child_weight=2,
         objective="binary:logistic",
         eval_metric="auc",
         tree_method="hist",
         n_jobs=-1,
         random_state=42
     )
+
 
 
 def build_random_forest():
