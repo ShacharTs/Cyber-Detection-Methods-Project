@@ -72,31 +72,6 @@ FEATURES = [
 ]
 
 # # Shachar's side of the features
-# WEAKLINK_FEATURES_LIST = [
-#     "num_dependencies",           # Dependency complexity
-#     "num_dev_dependencies",       # Dev dependency surface
-#     "num_dependents",             # Ecosystem trust / popularity
-#
-#     "description_length",         # Metadata quality
-#     "repository_exists",          # Transparency
-#     "license_exists",             # Legitimacy
-#
-#     "num_js_files",               # Package size / complexity
-#     "has_bin",                    # Executable exposure
-#
-#     "num_maintainers",            # Bus factor
-#     "num_contributors",           # Community involvement
-#
-#     #"days_since_last_update",     # Maintenance freshness
-#     "inactive_package_flag",      # Abandonment signal
-#
-#     "has_install_script",         # Install-time attack surface
-#     "num_install_scripts",        # Install script intensity
-#     "install_script_complexity"   # Script complexity proxy
-# ]
-
-
-
 WEAKLINK_FEATURES_LIST = [
     "num_dependencies",        # attack surface
     "num_dev_dependencies",    # dev surface

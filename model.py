@@ -19,7 +19,7 @@ def build_xgboost():
 
 def build_random_forest():
     return RandomForestClassifier(
-        n_estimators=500,
+        n_estimators=1000,
         max_depth=10,
         min_samples_leaf=2,
         class_weight="balanced",
