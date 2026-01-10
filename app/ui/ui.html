@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ML Inference Dashboard</title>
+  <style>
+    :root{
+      --bg:#0b1020;
+      --panel:rgba(255,255,255,.07);
+      --panel2:rgba(255,255,255,.10);
+      --stroke:rgba(255,255,255,.12);
+      --text:rgba(255,255,255,.92);
+      --muted:rgba(255,255,255,.65);
+      --ok:#34d399;
+      --bad:#fb7185;
+      --warn:#fbbf24;
+      --accent:#7c3aed;
+      --accent2:#22d3ee;
+      --shadow:0 18px 60px rgba(0,0,0,.45);
+      --radius:18px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; min-height:100vh; color:var(--text); font-family:var(--sans);
+      background:
+        radial-gradient(900px 500px at 15% -10%, rgba(124,58,237,0.35), transparent 60%),
+        radial-gradient(900px 500px at 85% 0%, rgba(34,211,238,0.25), transparent 55%),
+        radial-gradient(900px 500px at 60% 120%, rgba(52,211,153,0.16), transparent 55%),
+        var(--bg);
+    }
+    a{color:inherit}
+    .wrap{max-width:1100px; margin:0 auto; padding:28px 18px 48px;}
+    .header{display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:16px;}
+    h1{margin:0; font-size:22px}
+    .subtitle{margin:6px 0 0; font-size:13px; color:var(--muted); line-height:1.35}
+    .pills{display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;}
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:7px 10px; border-radius:999px;
+      border:1px solid var(--stroke); background:rgba(255,255,255,.05);
+      font-size:12px; color:var(--muted);
+    }
+    .dot{width:8px; height:8px; border-radius:999px; background:rgba(255,255,255,.35);}
+    .dot.ok{background:var(--ok)} .dot.bad{background:var(--bad)} .dot.warn{background:var(--warn)}
+
+    .card{
+      border-radius:var(--radius);
+      border:1px solid var(--stroke);
+      background:linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.05));
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .top{
+      padding:14px 16px; border-bottom:1px solid var(--stroke);
+      display:flex; justify-content:space-between; align-items:center; gap:10px;
+      background:rgba(0,0,0,.12);
+    }
+    .top h2{margin:0; font-size:14px; color:rgba(255,255,255,.88)}
+    .body{padding:14px 16px 16px;}
+    .controls{
+      display:grid; grid-template-columns:1fr; gap:10px; padding:14px 16px 16px;
+    }
+    @media (min-width:760px){ .controls{grid-template-columns:1.2fr .6fr .8fr;} }
+    label{display:block; font-size:12px; color:var(--muted); margin-bottom:6px;}
+    input[type="text"], input[type="number"]{
+      width:100%; padding:11px 12px; border-radius:14px;
+      border:1px solid var(--stroke);
+      background:rgba(255,255,255,.06);
+      color:var(--text);
+      outline:none;
+    }
+    input[type="text"]::placeholder{color:rgba(255,255,255,.35);}
+    input:focus{border-color:rgba(124,58,237,.6); box-shadow:0 0 0 4px rgba(124,58,237,.15);}
+
+    .btnrow{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+    button{
+      border:1px solid var(--stroke);
+      background:rgba(255,255,255,.07);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:14px;
+      cursor:pointer;
+      font-weight:700;
+      font-size:13px;
+      transition:transform .05s ease, background .15s ease;
+    }
+    button:hover{background:rgba(255,255,255,.10)}
+    button:active{transform:translateY(1px)}
+    button.primary{
+      border-color:rgba(124,58,237,.55);
+      background:linear-gradient(90deg, rgba(124,58,237,.9), rgba(34,211,238,.65));
+    }
+    button:disabled{opacity:.55; cursor:not-allowed;}
+
+    .grid{display:grid; grid-template-columns:1fr; gap:14px; margin-top:14px;}
+    @media (min-width:960px){ .grid{grid-template-columns:1.05fr .95fr;} }
+
+    .drop{
+      border:1px dashed rgba(255,255,255,.20);
+      background:rgba(255,255,255,.04);
+      border-radius:16px;
+      padding:16px;
+      display:flex; flex-direction:column; gap:10px;
+    }
+    .drop.dragover{border-color:rgba(34,211,238,.6); background:rgba(34,211,238,.10);}
+    .filemeta{display:flex; gap:10px; flex-wrap:wrap; font-size:12px; color:var(--muted);}
+    .filemeta code{font-family:var(--mono); color:rgba(255,255,255,.88);}
+
+    .stats{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:10px;
+      margin-top:12px;
+    }
+    @media (min-width:520px){ .stats{grid-template-columns:1fr 1fr;} }
+    .stat{
+      padding:12px;
+      border-radius:16px;
+      border:1px solid var(--stroke);
+      background:rgba(255,255,255,.05);
+    }
+    .stat .k{font-size:12px; color:var(--muted); margin-bottom:6px;}
+    .stat .v{font-size:18px; font-weight:900;}
+    .v.ok{color:var(--ok)} .v.bad{color:var(--bad)} .v.muted{color:rgba(255,255,255,.86); font-weight:800; font-size:14px;}
+
+    /* Accuracy emphasis */
+    .accBadge{
+      display:inline-flex; align-items:center; gap:10px;
+      padding:10px 12px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(0,0,0,.18);
+      margin-top:12px;
+    }
+    .accBadge .big{
+      font-size:22px; font-weight:950; letter-spacing:.2px;
+    }
+    .accBadge .meta{font-size:12px; color:var(--muted); line-height:1.35}
+    .accBadge.ok{border-color:rgba(52,211,153,.35); background:rgba(52,211,153,.08);}
+    .accBadge.bad{border-color:rgba(251,113,133,.35); background:rgba(251,113,133,.08);}
+    .accBadge.na{border-color:rgba(255,255,255,.14); background:rgba(255,255,255,.05);}
+
+    pre{
+      margin:0;
+      padding:12px;
+      border-radius:16px;
+      border:1px solid var(--stroke);
+      background:rgba(0,0,0,.18);
+      overflow:auto;
+      font-family:var(--mono);
+      font-size:12px;
+      color:rgba(255,255,255,.86);
+      max-height:420px;
+    }
+    .sep{height:1px; background:var(--stroke); margin:12px 0;}
+    .hint{font-size:12px; color:var(--muted); line-height:1.45;}
+    .hint code{
+      font-family:var(--mono);
+      padding:2px 6px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.06);
+      color:rgba(255,255,255,.88);
+      white-space:nowrap;
+    }
+    .linkbtn{
+      display:inline-flex; align-items:center; gap:8px;
+      text-decoration:none;
+      border-radius:14px;
+      border:1px solid rgba(34,211,238,.55);
+      background:rgba(34,211,238,.12);
+      padding:10px 12px;
+      font-weight:900;
+      font-size:13px;
+      margin-top:10px;
+    }
+    .linkbtn:hover{background:rgba(34,211,238,.18);}
+    .toast{
+      position:fixed; right:16px; bottom:16px;
+      display:flex; flex-direction:column; gap:10px; z-index:99;
+    }
+    .toast .msg{
+      width:min(420px, calc(100vw - 32px));
+      padding:12px; border-radius:16px;
+      border:1px solid var(--stroke);
+      background:rgba(0,0,0,.60);
+      box-shadow:var(--shadow);
+      display:flex; gap:10px; align-items:flex-start;
+      animation:pop .18s ease-out;
+    }
+    @keyframes pop{from{transform:translateY(6px); opacity:0;} to{transform:translateY(0); opacity:1;}}
+    .badge{width:10px; height:10px; border-radius:999px; margin-top:4px; background:rgba(255,255,255,.35); flex:0 0 auto;}
+    .badge.ok{background:var(--ok)} .badge.bad{background:var(--bad)} .badge.warn{background:var(--warn)}
+    .toast .t{font-weight:900; font-size:12px; margin-bottom:2px;}
+    .toast .b{font-size:12px; color:var(--muted); line-height:1.35;}
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="header">
+      <div>
+        <h1>ML Inference Dashboard</h1>
+        <p class="subtitle">
+          Upload a CSV to get predictions. If it contains a <code style="font-family:var(--mono)">label</code> column,
+          the app will compute and display accuracy, and you can download the processed CSV.
+        </p>
+        <div class="pills">
+          <div class="pill"><span class="dot" id="dotApi"></span><span id="apiStatus">API: unknown</span></div>
+          <div class="pill"><span class="dot warn" id="dotModel"></span><span id="modelStatus">Model: unknown</span></div>
+          <div class="pill"><span class="dot warn"></span><span>Docs: <a href="/docs" target="_blank" rel="noreferrer">/docs</a></span></div>
+        </div>
+      </div>
+      <div class="btnrow">
+        <button id="btnHealth" class="primary">Check health</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="controls">
+        <div>
+          <label for="baseUrl">API Base URL (leave empty if same host)</label>
+          <input id="baseUrl" type="text" placeholder="e.g. http://localhost:8000" />
+        </div>
+        <div>
+          <label for="topK">Top-K (optional)</label>
+          <input id="topK" type="number" min="1" value="1" />
+        </div>
+        <div class="btnrow" style="justify-content:flex-start; align-self:end;">
+          <button id="btnCopyCurl">Copy curl</button>
+          <button id="btnExampleCsv">Example CSV</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- LEFT: CSV -->
+      <div class="card">
+        <div class="top">
+          <h2>CSV → predictions (+ accuracy if label exists)</h2>
+          <div class="btnrow">
+            <button id="btnChoose">Choose CSV</button>
+            <input id="csvFile" type="file" accept=".csv,text/csv" style="display:none;" />
+          </div>
+        </div>
+        <div class="body">
+          <div class="drop" id="dropZone">
+            <div class="hint" style="margin:0;">
+              Drag & drop a <code>.csv</code> here, or click <code>Choose CSV</code>. Endpoint: <code>/process_csv</code>
+            </div>
+            <div class="filemeta" id="fileMeta"><span>No file selected</span></div>
+            <div class="btnrow" style="justify-content:flex-start;">
+              <button id="btnUpload" class="primary" disabled>Process</button>
+              <button id="btnClear" disabled>Clear</button>
+            </div>
+          </div>
+
+          <!-- Accuracy highlight -->
+          <div id="accBadge" class="accBadge na" style="display:none;">
+            <div class="big" id="accBig">—</div>
+            <div class="meta" id="accMeta">Accuracy</div>
+          </div>
+
+          <div class="stats">
+            <div class="stat">
+              <div class="k">Rows processed</div>
+              <div class="v muted" id="rowsOut">—</div>
+            </div>
+            <div class="stat">
+              <div class="k">Label detected</div>
+              <div class="v muted" id="labelOut">—</div>
+            </div>
+          </div>
+
+          <a class="linkbtn" id="downloadBtn" href="#" style="display:none;" download>Download result CSV</a>
+
+          <div class="sep"></div>
+          <div class="hint">
+            Output CSV always contains <code>predictions</code>.
+            If input contains <code>label</code>, accuracy is computed as exact match between <code>label</code> and <code>predictions</code>.
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: OUTPUT -->
+      <div class="card">
+        <div class="top">
+          <h2>Last response</h2>
+          <div class="btnrow">
+            <button id="btnCopyJson">Copy</button>
+            <button id="btnClearOut">Clear</button>
+          </div>
+        </div>
+        <div class="body">
+          <pre id="outPre">{}</pre>
+          <div class="sep"></div>
+          <div class="hint">
+            If you see an error here, check that <code>MODEL_PATH</code> and <code>FEATURES_PATH</code> are mounted correctly in Docker.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+
+  function base() {
+    const v = $("baseUrl").value.trim();
+    return v ? v.replace(/\/+$/, "") : "";
+  }
+  function show(obj) { $("outPre").textContent = JSON.stringify(obj, null, 2); }
+
+  function toast(type, title, body) {
+    const wrap = $("toast");
+    const el = document.createElement("div");
+    el.className = "msg";
+    const badge = document.createElement("div");
+    badge.className = "badge " + (type === "ok" ? "ok" : type === "bad" ? "bad" : "warn");
+    const text = document.createElement("div");
+    text.innerHTML = `<div class="t">${title}</div><div class="b">${body}</div>`;
+    el.appendChild(badge); el.appendChild(text);
+    wrap.appendChild(el);
+    setTimeout(() => { el.style.opacity = "0"; el.style.transform = "translateY(6px)"; }, 3200);
+    setTimeout(() => { el.remove(); }, 3600);
+  }
+
+  async function fetchJSON(url, opts) {
+    const res = await fetch(url, opts);
+    const txt = await res.text();
+    let data;
+    try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
+    if (!res.ok) {
+      const msg = data?.detail || data?.error || data?.raw || `HTTP ${res.status}`;
+      throw new Error(msg);
+    }
+    return data;
+  }
+
+  function setPills(ok, modelPath) {
+    $("dotApi").className = "dot " + (ok ? "ok" : "bad");
+    $("apiStatus").textContent = "API: " + (ok ? "online" : "offline");
+    if (modelPath) {
+      $("dotModel").className = "dot ok";
+      $("modelStatus").textContent = "Model: " + modelPath;
+    } else {
+      $("dotModel").className = "dot warn";
+      $("modelStatus").textContent = "Model: unknown";
+    }
+  }
+
+  async function doHealth() {
+    try {
+      const data = await fetchJSON(base() + "/health", { method: "GET" });
+      setPills(true, data.model_path || data.modelPath);
+      show(data);
+      toast("ok", "Health OK", "API is reachable.");
+    } catch (e) {
+      setPills(false);
+      show({ error: e.message });
+      toast("bad", "Health failed", e.message);
+    }
+  }
+
+  // Output controls
+  $("btnCopyJson").addEventListener("click", async () => {
+    await navigator.clipboard.writeText($("outPre").textContent);
+    toast("ok", "Copied", "Response JSON copied.");
+  });
+  $("btnClearOut").addEventListener("click", () => show({}));
+
+  // Buttons
+  $("btnHealth").addEventListener("click", doHealth);
+  $("btnCopyCurl").addEventListener("click", async () => {
+    const url = (base() || "") + "/process_csv";
+    const txt = `curl -X POST "${url}" -F "file=@your.csv"`;
+    await navigator.clipboard.writeText(txt);
+    toast("ok", "Copied", "Curl command copied.");
+  });
+
+  // Example CSV
+  $("btnExampleCsv").addEventListener("click", () => {
+    const csv = "num_dependencies,num_dev_dependencies,description_length,num_js_files,num_maintainers,num_contributors,repository_exists,license_exists,inactive_package_flag,has_install_script,num_install_scripts,bf_net_requests,bf_fs_ops,bf_proc_exec,bf_dynamic_exec,bf_env_access,buni_DYNAMIC_CODE_EXEC,buni_NETWORK_COMM,buni_PROCESS_EXECUTION,identifier_entropy,num_lines,label\n" +
+                "1,0,120,5,1,2,1,1,0,0,0,0,0,0,0,0,0,0,0,3.2,200,0\n" +
+                "3,1,80,2,2,1,1,0,1,1,1,2,1,0,0,0,0,1,0,2.1,140,1\n";
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "example_with_label.csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast("ok", "Downloaded", "Example CSV created.");
+  });
+
+  // CSV selection / drag&drop
+  const drop = $("dropZone");
+  const fileInput = $("csvFile");
+  let selectedFile = null;
+
+  function resetAccUI() {
+    $("rowsOut").textContent = "—";
+    $("labelOut").textContent = "—";
+    $("downloadBtn").style.display = "none";
+    $("accBadge").style.display = "none";
+    $("accBig").textContent = "—";
+    $("accMeta").textContent = "Accuracy";
+    $("accBadge").className = "accBadge na";
+  }
+
+  function setFile(file) {
+    selectedFile = file;
+    resetAccUI();
+    if (!file) {
+      $("fileMeta").innerHTML = "<span>No file selected</span>";
+      $("btnUpload").disabled = true;
+      $("btnClear").disabled = true;
+      return;
+    }
+    const kb = Math.round(file.size / 1024);
+    $("fileMeta").innerHTML = `
+      <span>Selected: <code>${file.name}</code></span>
+      <span>Size: <code>${kb} KB</code></span>
+      <span>Type: <code>${file.type || "text/csv"}</code></span>
+    `;
+    $("btnUpload").disabled = false;
+    $("btnClear").disabled = false;
+  }
+
+  $("btnChoose").addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", () => setFile(fileInput.files[0] || null));
+  $("btnClear").addEventListener("click", () => { fileInput.value=""; setFile(null); toast("ok","Cleared","Selection cleared."); });
+
+  drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("dragover"); });
+  drop.addEventListener("dragleave", () => drop.classList.remove("dragover"));
+  drop.addEventListener("drop", (e) => {
+    e.preventDefault();
+    drop.classList.remove("dragover");
+    const f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (!f) return;
+    if (!f.name.toLowerCase().endsWith(".csv")) { toast("warn","Not a CSV","Please drop a .csv file."); return; }
+    setFile(f);
+    toast("ok","File selected", f.name);
+  });
+
+  // Process CSV → shows accuracy if present
+  $("btnUpload").addEventListener("click", async () => {
+    if (!selectedFile) return;
+
+    const btn = $("btnUpload");
+    btn.disabled = true;
+    btn.textContent = "Processing...";
+    resetAccUI();
+
+    try {
+      const form = new FormData();
+      form.append("file", selectedFile);
+
+      const data = await fetchJSON(base() + "/process_csv", { method: "POST", body: form });
+      show(data);
+
+      const n = data.n_rows ?? data.nRows ?? null;
+      $("rowsOut").textContent = (n === null ? "—" : String(n));
+
+      const hasLabel = !!data.has_label;
+      $("labelOut").textContent = hasLabel ? "Yes" : "No";
+      $("labelOut").className = "v " + (hasLabel ? "ok" : "muted");
+
+      // === Accuracy display (main ask) ===
+      // Show only if label exists and accuracy is provided
+      if (hasLabel && data.accuracy !== null && data.accuracy !== undefined) {
+        const acc = Number(data.accuracy);
+        const pct = (acc * 100).toFixed(2) + "%";
+
+        $("accBadge").style.display = "";
+        $("accBig").textContent = pct;
+        $("accMeta").textContent = "Accuracy (label vs predictions)";
+
+        // Style badge by threshold (cosmetic)
+        if (!Number.isFinite(acc)) {
+          $("accBadge").className = "accBadge na";
+          $("accBig").textContent = "—";
+          $("accMeta").textContent = "Accuracy (invalid number)";
+        } else if (acc >= 0.5) {
+          $("accBadge").className = "accBadge ok";
+        } else {
+          $("accBadge").className = "accBadge bad";
+        }
+      } else {
+        $("accBadge").style.display = "";
+        $("accBadge").className = "accBadge na";
+        $("accBig").textContent = "N/A";
+        $("accMeta").textContent = "No label column → accuracy not computed";
+      }
+
+      // Download
+      if (data.download_url) {
+        const url = (base() || "") + data.download_url;
+        const a = $("downloadBtn");
+        a.href = url;
+        a.style.display = "";
+        a.setAttribute("download", data.job_id ? `result_${data.job_id}.csv` : "result.csv");
+      }
+
+      toast("ok", "Done", hasLabel ? "Accuracy computed and file is ready." : "Predictions file is ready.");
+    } catch (e) {
+      show({ error: e.message });
+      toast("bad", "Failed", e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Process";
+    }
+  });
+
+  // Initial health check (best effort)
+  doHealth();
+</script>
+</body>
+</html>

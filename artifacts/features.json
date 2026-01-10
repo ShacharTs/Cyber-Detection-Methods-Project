@@ -1,0 +1,23 @@
+[
+  "num_dependencies",
+  "num_dev_dependencies",
+  "description_length",
+  "num_js_files",
+  "num_maintainers",
+  "num_contributors",
+  "repository_exists",
+  "license_exists",
+  "inactive_package_flag",
+  "has_install_script",
+  "num_install_scripts",
+  "bf_net_requests",
+  "bf_fs_ops",
+  "bf_proc_exec",
+  "bf_dynamic_exec",
+  "bf_env_access",
+  "buni_DYNAMIC_CODE_EXEC",
+  "buni_NETWORK_COMM",
+  "buni_PROCESS_EXECUTION",
+  "identifier_entropy",
+  "num_lines"
+]
