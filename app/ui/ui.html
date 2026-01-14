@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ML Inference Dashboard - Worker Edition</title>
+  <title>NPM Malware Detection - Dashboard</title>
   <style>
     :root{
       --bg:#0b1020;
@@ -21,6 +21,8 @@
       --radius:18px;
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      /* צבע רקע סולידי לתפריטים */
+      --dropdown-bg: #161b2c;
     }
     *{box-sizing:border-box}
     body{
@@ -31,171 +33,158 @@
         radial-gradient(900px 500px at 60% 120%, rgba(52,211,153,0.16), transparent 55%),
         var(--bg);
     }
-    a{color:inherit}
     .wrap{max-width:1100px; margin:0 auto; padding:28px 18px 48px;}
-    .header{display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:16px;}
-    h1{margin:0; font-size:22px}
-    .subtitle{margin:6px 0 0; font-size:13px; color:var(--muted); line-height:1.35}
-    .pills{display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;}
-    .pill{
-      display:inline-flex; align-items:center; gap:8px;
-      padding:7px 10px; border-radius:999px;
-      border:1px solid var(--stroke); background:rgba(255,255,255,.05);
-      font-size:12px; color:var(--muted);
-    }
-    .dot{width:8px; height:8px; border-radius:999px; background:rgba(255,255,255,.35);}
-    .dot.ok{background:var(--ok)} .dot.bad{background:var(--bad)} .dot.warn{background:var(--warn)}
+    .header{margin-bottom:24px;}
+    h1{margin:0; font-size:26px; letter-spacing:-0.02em;}
+    .subtitle{margin:8px 0 0; font-size:14px; color:var(--muted); line-height:1.4}
 
     .card{
       border-radius:var(--radius);
       border:1px solid var(--stroke);
       background:linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.05));
       box-shadow:var(--shadow);
-      overflow:hidden;
+      overflow:visible; /* קריטי כדי שהתפריט לא ייחתך */
     }
     .top{
       padding:14px 16px; border-bottom:1px solid var(--stroke);
       display:flex; justify-content:space-between; align-items:center; gap:10px;
       background:rgba(0,0,0,.12);
+      overflow:visible;
     }
     .top h2{margin:0; font-size:14px; color:rgba(255,255,255,.88)}
-    .body{padding:14px 16px 16px;}
-    .controls{
-      display:grid; grid-template-columns:1fr; gap:10px; padding:14px 16px 16px;
-    }
-    @media (min-width:760px){ .controls{grid-template-columns:1.2fr .6fr .8fr;} }
-    label{display:block; font-size:12px; color:var(--muted); margin-bottom:6px;}
-    input[type="text"], input[type="number"]{
-      width:100%; padding:11px 12px; border-radius:14px;
-      border:1px solid var(--stroke);
-      background:rgba(255,255,255,.06);
-      color:var(--text);
-      outline:none;
-    }
-    input:focus{border-color:rgba(124,58,237,.6); box-shadow:0 0 0 4px rgba(124,58,237,.15);}
+    .body{padding:16px;}
 
-    .btnrow{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
-    button{
-      border:1px solid var(--stroke); background:rgba(255,255,255,.07); color:var(--text);
-      padding:10px 12px; border-radius:14px; cursor:pointer; font-weight:700; font-size:13px;
+    .btnrow{display:flex; gap:10px; flex-wrap:wrap; align-items:center; overflow:visible;}
+
+    button, select{
+      border:1px solid var(--stroke);
+      background: var(--dropdown-bg);
+      color: var(--text);
+      padding:10px 16px; border-radius:12px; cursor:pointer; font-weight:700; font-size:13px;
+      transition: all 0.2s;
+      outline: none;
     }
+
+    /* תיקון ה-Select וה-Option */
+    select {
+      appearance: auto; /* מאפשר לדפדפן לרנדר את החץ בצורה טבעית למניעת באגים */
+      min-width: 160px;
+    }
+
+    select option {
+      background-color: var(--dropdown-bg);
+      color: white;
+    }
+
     button.primary{
       border-color:rgba(124,58,237,.55);
       background:linear-gradient(90deg, rgba(124,58,237,.9), rgba(34,211,238,.65));
     }
-    button:disabled{opacity:.55; cursor:not-allowed;}
+    button:hover:not(:disabled){ transform: translateY(-1px); filter: brightness(1.1); }
+    button:disabled{opacity:.4; cursor:not-allowed;}
 
-    .grid{display:grid; grid-template-columns:1fr; gap:14px; margin-top:14px;}
-    @media (min-width:960px){ .grid{grid-template-columns:1.05fr .95fr;} }
+    .grid{display:grid; grid-template-columns:1fr; gap:16px; margin-top:20px;}
+    @media (min-width:960px){ .grid{grid-template-columns:1.1fr 0.9fr;} }
 
     .drop{
       border:1px dashed rgba(255,255,255,.20); background:rgba(255,255,255,.04);
-      border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:10px;
+      border-radius:16px; padding:24px; display:flex; flex-direction:column; gap:16px;
+      text-align:center;
     }
-    .filemeta{display:flex; gap:10px; flex-wrap:wrap; font-size:12px; color:var(--muted);}
+    #fileMeta{ font-size:13px; color:var(--muted); font-family:var(--mono); }
 
-    .stats{ display:grid; grid-template-columns:1fr; gap:10px; margin-top:12px; }
-    @media (min-width:520px){ .stats{grid-template-columns:1fr 1fr;} }
-    .stat{ padding:12px; border-radius:16px; border:1px solid var(--stroke); background:rgba(255,255,255,.05); }
-    .stat .k{font-size:12px; color:var(--muted); margin-bottom:6px;}
-    .stat .v{font-size:18px; font-weight:900;}
+    .stats{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:16px; }
+    .stat{ padding:12px; border-radius:14px; border:1px solid var(--stroke); background:rgba(255,255,255,.05); }
+    .stat .k{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;}
+    .stat .v{font-size:16px; font-weight:800;}
 
     .accBadge{
-      display:inline-flex; align-items:center; gap:10px;
-      padding:10px 12px; border-radius:16px; border:1px solid rgba(255,255,255,.14);
-      background:rgba(0,0,0,.18); margin-top:12px;
+      display:inline-flex; align-items:center; gap:12px;
+      padding:12px 16px; border-radius:16px; border:1px solid rgba(255,255,255,.14);
+      background:rgba(0,0,0,.18); margin-top:16px; width:100%;
     }
-    .accBadge.ok{border-color:rgba(52,211,153,.35); background:rgba(52,211,153,.08);}
-    .accBadge.bad{border-color:rgba(251,113,133,.35); background:rgba(251,113,133,.08);}
+    .accBadge.ok{border-color:var(--ok); background:rgba(52,211,153,.1);}
+    .accBadge.bad{border-color:var(--bad); background:rgba(251,113,133,.1);}
 
     pre{
       margin:0; padding:12px; border-radius:16px; border:1px solid var(--stroke);
       background:rgba(0,0,0,.18); overflow:auto; font-family:var(--mono); font-size:12px;
+      height: 320px;
     }
     .linkbtn{
-      display:inline-flex; align-items:center; gap:8px; text-decoration:none;
-      border-radius:14px; border:1px solid rgba(34,211,238,.55); background:rgba(34,211,238,.12);
-      padding:10px 12px; font-weight:900; font-size:13px; margin-top:10px;
+      display:inline-flex; align-items:center; justify-content:center; gap:8px; text-decoration:none;
+      border-radius:12px; border:1px solid rgba(34,211,238,.55); background:rgba(34,211,238,.12);
+      padding:12px; font-weight:800; font-size:13px; margin-top:12px; width:100%; color: var(--accent2);
     }
     .toast{
       position:fixed; right:16px; bottom:16px; display:flex; flex-direction:column; gap:10px; z-index:99;
     }
     .toast .msg{
-      width:min(420px, calc(100vw - 32px)); padding:12px; border-radius:16px;
-      border:1px solid var(--stroke); background:rgba(0,0,0,.80); box-shadow:var(--shadow);
-      display:flex; gap:10px; align-items:flex-start; animation:pop .18s ease-out;
+      width:320px; padding:12px; border-radius:12px;
+      border:1px solid var(--stroke); background:rgba(15, 23, 42, 0.9); backdrop-filter: blur(8px);
+      box-shadow:var(--shadow); display:flex; gap:10px; animation:pop .2s ease-out;
     }
-    @keyframes pop{from{transform:translateY(6px); opacity:0;} to{transform:translateY(0); opacity:1;}}
+    @keyframes pop{from{transform:translateY(10px); opacity:0;} to{transform:translateY(0); opacity:1;}}
   </style>
 </head>
 
 <body>
   <div class="wrap">
     <div class="header">
-      <div>
-        <h1>ML Inference Dashboard</h1>
-        <p class="subtitle">Distributed Worker Architecture: Backend queues tasks while Workers process results.</p>
-        <div class="pills">
-          <div class="pill"><span class="dot" id="dotApi"></span><span id="apiStatus">API: unknown</span></div>
-          <div class="pill"><span class="dot warn" id="dotModel"></span><span id="modelStatus">Model: unknown</span></div>
-        </div>
-      </div>
-      <div class="btnrow">
-        <button id="btnHealth" class="primary">Check health</button>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="controls">
-        <div>
-          <label for="baseUrl">API Base URL</label>
-          <input id="baseUrl" type="text" placeholder="e.g. http://localhost:8000" />
-        </div>
-      </div>
+      <h1>NPM Malware Detection Dashboard</h1>
+      <p class="subtitle">By Shachar Tsrafati and Eitan Beriy</p>
+      <p class="subtitle">Choose detection strategy: <b>WeakLink</b> (Model 1), <b>DonPai</b> (Model 2), or <b>Combined</b> (Both).</p>
     </div>
 
     <div class="grid">
       <div class="card">
         <div class="top">
-          <h2>Worker Status: <span id="workerStatus">Idle</span></h2>
+          <h2>Worker: <span id="workerStatus" style="color:var(--accent2)">Idle</span></h2>
           <div class="btnrow">
-            <button id="btnChoose">Choose CSV</button>
+            <select id="modelStrategy">
+              <option value="combined">Both (Combined)</option>
+              <option value="weaklink">Model 1 (WeakLink)</option>
+              <option value="donpai">Model 2 (DonPai)</option>
+            </select>
+            <button id="btnChoose">Select CSV</button>
             <input id="csvFile" type="file" accept=".csv" style="display:none;" />
           </div>
         </div>
         <div class="body">
           <div class="drop" id="dropZone">
-            <div id="fileMeta"><span>No file selected</span></div>
-            <div class="btnrow">
-              <button id="btnUpload" class="primary" disabled>Start Worker</button>
+            <div id="fileMeta">No file selected</div>
+            <div class="btnrow" style="justify-content:center">
+              <button id="btnUpload" class="primary" disabled>Start Analysis</button>
               <button id="btnClear" disabled>Clear</button>
             </div>
           </div>
 
-          <div id="accBadge" class="accBadge na" style="display:none;">
-            <div class="big" style="font-size:22px; font-weight:900;" id="accBig">—</div>
-            <div class="meta" id="accMeta">Accuracy</div>
+          <div id="accBadge" class="accBadge" style="display:none;">
+            <div id="accBig" style="font-size:24px; font-weight:900;">0%</div>
+            <div style="font-size:12px; color:var(--muted)">Strategy Accuracy<br/><span id="strategyName">Selected Model</span></div>
           </div>
 
           <div class="stats">
             <div class="stat">
-              <div class="k">Rows</div>
+              <div class="k">Packages Analyzed</div>
               <div class="v" id="rowsOut">—</div>
             </div>
             <div class="stat">
-              <div class="k">Job ID</div>
-              <div class="v" style="font-size:12px; overflow:hidden;" id="jobIdOut">—</div>
+              <div class="k">Task Identity</div>
+              <div class="v" style="font-size:11px; color:var(--muted)" id="jobIdOut">N/A</div>
             </div>
           </div>
 
-          <a class="linkbtn" id="downloadBtn" href="#" style="display:none;" download>Download Result</a>
+          <a class="linkbtn" id="downloadBtn" href="#" style="display:none;" download>
+            Download Detection Results (CSV)
+          </a>
         </div>
       </div>
 
       <div class="card">
-        <div class="top"><h2>Live Logs</h2></div>
+        <div class="top"><h2>Live Processing Logs</h2></div>
         <div class="body">
-          <pre id="outPre">Waiting for task...</pre>
+          <pre id="outPre">System ready. Waiting for input...</pre>
         </div>
       </div>
     </div>
@@ -205,16 +194,16 @@
 
 <script>
   const $ = (id) => document.getElementById(id);
-  function base() { return $("baseUrl").value.trim().replace(/\/+$/, ""); }
+  function base() { return "http://localhost:8000"; }
   function show(obj) { $("outPre").textContent = JSON.stringify(obj, null, 2); }
 
-  function toast(type, title, body) {
+  function toast(title, body) {
     const wrap = $("toast");
     const el = document.createElement("div");
     el.className = "msg";
-    el.innerHTML = `<div><div style="font-weight:900;">${title}</div><div style="font-size:12px; color:var(--muted);">${body}</div></div>`;
+    el.innerHTML = `<div><div style="font-weight:800;">${title}</div><div style="font-size:12px; color:var(--muted);">${body}</div></div>`;
     wrap.appendChild(el);
-    setTimeout(() => { el.remove(); }, 3600);
+    setTimeout(() => { el.remove(); }, 4000);
   }
 
   async function fetchJSON(url, opts) {
@@ -224,7 +213,6 @@
     return data;
   }
 
-  // Polling Logic
   async function pollStatus(jobId) {
     const btn = $("btnUpload");
     const statusText = $("workerStatus");
@@ -237,84 +225,79 @@
 
         if (data.status === "completed") {
           clearInterval(interval);
-          statusText.textContent = "Done";
+          statusText.textContent = "Finished";
           btn.disabled = false;
-          btn.textContent = "Start Worker";
+          btn.textContent = "Start Analysis";
 
-          // Update Stats
           $("rowsOut").textContent = data.n_rows;
           $("accBig").textContent = data.accuracy ? (data.accuracy * 100).toFixed(2) + "%" : "N/A";
+          $("strategyName").textContent = data.selected_strategy || "Selected Model";
           $("accBadge").style.display = "flex";
-          $("accBadge").className = "accBadge " + (data.accuracy >= 0.5 ? "ok" : "bad");
+          $("accBadge").className = "accBadge " + (data.accuracy >= 0.8 ? "ok" : "bad");
 
-          // Set Download
           const dBtn = $("downloadBtn");
           dBtn.href = `${base()}/download/${jobId}`;
           dBtn.style.display = "inline-flex";
 
-          toast("ok", "Worker Finished", `Processed ${data.n_rows} rows.`);
+          toast("Detection Complete", `Analysis finished using ${data.selected_strategy}.`);
         }
       } catch (e) {
         clearInterval(interval);
-        statusText.textContent = "Error";
+        statusText.textContent = "Worker Error";
         btn.disabled = false;
-        toast("bad", "Polling Failed", e.message);
       }
-    }, 2000); // Poll every 2 seconds
+    }, 2000);
   }
 
-  // Upload Logic
   $("btnUpload").addEventListener("click", async () => {
     const file = $("csvFile").files[0];
+    const strategy = $("modelStrategy").value;
     if (!file) return;
 
     const btn = $("btnUpload");
     btn.disabled = true;
-    btn.textContent = "Queueing...";
+    btn.textContent = "Uploading...";
     $("workerStatus").textContent = "Queueing...";
 
     try {
       const form = new FormData();
       form.append("file", file);
+      form.append("strategy", strategy);
 
-      // Initial request starts the worker
       const data = await fetchJSON(base() + "/process_csv", { method: "POST", body: form });
       show(data);
-
-      $("jobIdOut").textContent = data.job_id;
-      $("workerStatus").textContent = "Processing...";
+      $("jobIdOut").textContent = data.job_id.substring(0, 12) + "...";
+      $("workerStatus").textContent = "In Progress";
       pollStatus(data.job_id);
-
     } catch (e) {
       show({ error: e.message });
       btn.disabled = false;
-      btn.textContent = "Start Worker";
-      toast("bad", "Failed to queue", e.message);
+      btn.textContent = "Start Analysis";
+      toast("Error", e.message);
     }
   });
 
-  // UI Helpers
   $("btnChoose").addEventListener("click", () => $("csvFile").click());
   $("csvFile").addEventListener("change", (e) => {
     const f = e.target.files[0];
     if (f) {
-      $("fileMeta").textContent = `Selected: ${f.name} (${Math.round(f.size/1024)} KB)`;
+      $("fileMeta").textContent = `${f.name} (${Math.round(f.size/1024)} KB)`;
       $("btnUpload").disabled = false;
       $("btnClear").disabled = false;
     }
   });
 
-  $("btnHealth").addEventListener("click", async () => {
-    try {
-      const data = await fetchJSON(base() + "/health");
-      $("dotApi").className = "dot ok";
-      $("apiStatus").textContent = "API: Online";
-      show(data);
-      toast("ok", "Health Check", "Backend is reachable.");
-    } catch (e) {
-      $("dotApi").className = "dot bad";
-      toast("bad", "Offline", e.message);
-    }
+  $("btnClear").addEventListener("click", () => {
+    $("csvFile").value = "";
+    $("fileMeta").textContent = "No file selected";
+    $("accBadge").style.display = "none";
+    $("downloadBtn").style.display = "none";
+    $("rowsOut").textContent = "—";
+    $("jobIdOut").textContent = "N/A";
+    $("workerStatus").textContent = "Idle";
+    $("btnUpload").disabled = true;
+    $("btnClear").disabled = true;
+    show("System ready.");
   });
 </script>
 </body>

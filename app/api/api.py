@@ -6,7 +6,8 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+# ייבוא Form נוסף לרשימה כדי לקבל את הבחירה מה-UI
+from fastapi import FastAPI, File, HTTPException, UploadFile, Form
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 
@@ -32,7 +33,8 @@ class PredictResponse(BaseModel):
 # App
 # ----------------------------
 def create_app() -> FastAPI:
-    app = FastAPI(title="ML Inference API - Distributed", version="2.0.0")
+    # עדכון גרסה ל-2.1.0 לציון התמיכה בבחירת מודל
+    app = FastAPI(title="ML Inference API - Distributed", version="2.1.0")
 
     # Shared storage directory
     RESULTS_DIR = Path(os.getenv("RESULTS_DIR", "/shared/results"))
@@ -47,20 +49,24 @@ def create_app() -> FastAPI:
         return ui_path.read_text(encoding="utf-8") if ui_path.exists() else "UI Not Found"
 
     @app.post("/process_csv")
-    async def process_csv(file: UploadFile = File(...)):
-        """Queue a CSV for processing."""
+    async def process_csv(
+        file: UploadFile = File(...),
+        strategy: str = Form("combined")  # קבלת האסטרטגיה מה-UI (ברירת מחדל: combined)
+    ):
+        """Queue a CSV for processing with a selected model strategy."""
         content = await file.read()
         if not content:
             raise HTTPException(status_code=400, detail="Empty file")
 
         job_id = str(uuid.uuid4())
 
-        # Send to Redis via Celery
-        process_prediction_task.delay(content, job_id)
+        # שליחה ל-Redis דרך Celery - כעת כולל את הפרמטר strategy
+        process_prediction_task.delay(content, job_id, strategy)
 
         return JSONResponse({
             "job_id": job_id,
             "status": "Accepted",
+            "strategy_selected": strategy,
             "check_status_url": f"/status/{job_id}",
             "download_url": f"/download/{job_id}"
         }, status_code=202)

@@ -1,6 +1,5 @@
 import os
 import json
-import uuid
 from pathlib import Path
 from celery import Celery
 import pandas as pd
@@ -8,66 +7,60 @@ import pandas as pd
 from app.api.inference import InferenceEngine
 from app.api.processor import Processor
 
-# 1. Initialize Celery with Redis as the Message Broker
+# Initialize Celery with Redis as broker and backend
 celery_app = Celery(
     "prediction_tasks",
     broker=os.getenv("REDIS_URL", "redis://redis:6379/0"),
     backend=os.getenv("REDIS_URL", "redis://redis:6379/0")
 )
 
-# 2. Initialize engines once at startup to optimize performance
 processor = Processor()
 engine = InferenceEngine()
-
-# Use a directory shared between API and Worker containers
 RESULTS_DIR = Path(os.getenv("RESULTS_DIR", "/shared/results"))
-RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @celery_app.task(name="process_prediction_task")
-def process_prediction_task(csv_content: bytes, job_id: str):
+def process_prediction_task(csv_content: bytes, job_id: str, strategy: str = "combined"):
     """
-    Background worker: Processes CSV, runs ML model, and saves results.
+    Processes CSV using specific or multiple models based on the selected strategy.
+
+    Args:
+        csv_content: Raw bytes of the uploaded CSV.
+        job_id: Unique identifier for the task.
+        strategy: The chosen model ('weaklink', 'donpai', or 'combined').
     """
-    try:
-        # Step A: Transform raw CSV bytes into model-ready features
-        df_model = processor.csv_bytes_to_df(csv_content)
+    # 1. Load data into a raw dataframe
+    df_raw = processor.csv_bytes_to_raw_df(csv_content)
 
-        # Step B: Perform Inference
-        out = engine.predict(df_model)
-        preds = out.get("predictions", [])
+    # 2. Run all models to get a full comparison
+    # engine.predict_all returns a dict: {'weaklink': [...], 'donpai': [...], 'combined': [...]}
+    all_preds = engine.predict_all(df_raw, processor)
 
-        # Step C: Load original data for the final output CSV
-        df_raw = processor.csv_bytes_to_raw_df(csv_content)
+    # 3. Calculate accuracies if ground truth 'label' exists
+    accuracies = {}
+    if "label" in df_raw.columns:
+        for name, preds in all_preds.items():
+            # Standardize comparison by converting to string
+            correct = (df_raw["label"].astype(str) == pd.Series(preds).astype(str)).mean()
+            accuracies[name] = float(correct)
 
-        # Robust column cleanup (BOM/whitespace)
-        df_raw.columns = [str(c).replace("\ufeff", "").strip() for c in df_raw.columns]
-        df_raw["predictions"] = preds
+    # 4. Save metadata for the UI
+    meta_path = RESULTS_DIR / f"{job_id}.json"
+    with open(meta_path, "w") as f:
+        # Extract the accuracy for the SPECIFIC strategy selected by the user
+        selected_accuracy = accuracies.get(strategy, 0.0)
 
-        # Step D: Accuracy Calculation (if a label exists)
-        accuracy = None
-        lower_cols = {c.lower(): c for c in df_raw.columns}
-        if "label" in lower_cols:
-            label_col = lower_cols["label"]
-            y_true = df_raw[label_col].astype(str)
-            y_pred = df_raw["predictions"].astype(str)
-            accuracy = float((y_true == y_pred).mean())
+        json.dump({
+            "status": "completed",
+            "selected_strategy": strategy,
+            "accuracy": selected_accuracy,  # Key used by the UI badge
+            "all_accuracies": accuracies,  # Full breakdown for the logs
+            "n_rows": len(df_raw)
+        }, f)
 
-        # Step E: Save the prediction CSV
-        csv_path = RESULTS_DIR / f"{job_id}.csv"
-        df_raw.to_csv(csv_path, index=False)
+    # 5. Save the results to CSV
+    # We add the predictions of the selected model and a label for clarity
+    df_raw["predicted_label"] = all_preds.get(strategy, [])
+    df_raw["model_strategy"] = strategy
 
-        # Step F: Save metadata (JSON) so API doesn't have to read the CSV
-        meta_path = RESULTS_DIR / f"{job_id}.json"
-        with open(meta_path, "w") as f:
-            json.dump({
-                "job_id": job_id,
-                "status": "completed",
-                "accuracy": accuracy,
-                "n_rows": len(df_raw)
-            }, f)
-
-        return {"status": "success", "job_id": job_id}
-
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
+    df_raw.to_csv(RESULTS_DIR / f"{job_id}.csv", index=False)

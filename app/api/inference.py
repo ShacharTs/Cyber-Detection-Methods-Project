@@ -1,72 +1,45 @@
-from __future__ import annotations
-
 import os
-from typing import Any, Dict, Optional
-
-import numpy as np
-import pandas as pd
+import json
 import joblib
+import pandas as pd
+from pathlib import Path
+from typing import Any, Dict
 
 
 class InferenceEngine:
-    """
-    Expects an sklearn-like model at MODEL_PATH that implements:
-      - predict(X) OR predict_proba(X)
-    """
-
     def __init__(self) -> None:
-        self.model_path = os.getenv("MODEL_PATH", "/app/artifacts/xgboost_model.pkl")
-        self.top_k = int(os.getenv("TOP_K", "1"))
-        self._model: Optional[Any] = None
+        # Use the same artifact directory as the trainer
+        self.artifact_dir = Path(os.getenv("ARTIFACT_DIR", "/app/artifacts"))
+        self.model_names = ["weaklink", "donpai", "combined"]
+        self.models = {}
+        self.features = {}
+        self._loaded = False
 
-    def _load(self) -> Any:
-        if not os.path.exists(self.model_path):
-            raise FileNotFoundError(
-                f"Model not found at {self.model_path}. "
-                f"Mount/copy your model and set MODEL_PATH."
-            )
-        return joblib.load(self.model_path)
+    def _ensure_loaded(self):
+        """Loads all 3 models and their feature lists once."""
+        if self._loaded:
+            return
+        for name in self.model_names:
+            m_path = self.artifact_dir / f"{name}_model.pkl"
+            f_path = self.artifact_dir / f"{name}_features.json"
+            if m_path.exists() and f_path.exists():
+                self.models[name] = joblib.load(m_path)
+                with open(f_path, "r") as f:
+                    self.features[name] = json.load(f)
+        self._loaded = True
 
-    def ensure_loaded(self) -> None:
-        if self._model is None:
-            self._model = self._load()
+    def predict_all(self, df_raw: pd.DataFrame, processor: Any) -> Dict[str, list]:
+        """Runs all strategies as required by worker.py."""
+        self._ensure_loaded()
+        all_results = {}
 
-    def predict(self, df: pd.DataFrame) -> Dict[str, Any]:
-        self.ensure_loaded()
-        assert self._model is not None
+        for name, model in self.models.items():
+            # Prepare data specifically for this model's feature set
+            feat_list = self.features.get(name, [])
+            df_proc = processor.prepare_for_model(df_raw, feat_list)
 
-        X = df.values
-        out: Dict[str, Any] = {"n_rows": int(len(df))}
+            # Generate predictions
+            preds = model.predict(df_proc)
+            all_results[name] = preds.tolist()
 
-        model = self._model
-
-        if hasattr(model, "predict_proba"):
-            proba = np.asarray(model.predict_proba(X))
-            k = max(1, self.top_k)
-            k = min(k, proba.shape[1])
-
-            topk_idx = np.argsort(-proba, axis=1)[:, :k]
-            topk_scores = np.take_along_axis(proba, topk_idx, axis=1)
-
-            classes = getattr(model, "classes_", None)
-            if classes is not None:
-                classes = np.asarray(classes)
-                topk_labels = classes[topk_idx].tolist()
-            else:
-                topk_labels = topk_idx.tolist()
-
-            out["topk"] = {"k": k, "labels": topk_labels, "scores": topk_scores.tolist()}
-
-            # top-1
-            if k == 1:
-                out["predictions"] = topk_labels  # already list-of-rows
-            else:
-                out["predictions"] = [row[0] for row in topk_labels]
-
-        else:
-            preds = model.predict(X)
-            out["predictions"] = preds.tolist() if hasattr(preds, "tolist") else list(preds)
-        preds = out.get("predictions", [])
-        if isinstance(preds, list):
-            out["predictions"] = [p[0] if isinstance(p, (list, tuple)) and len(p) == 1 else p for p in preds]
-        return out
+        return all_results
