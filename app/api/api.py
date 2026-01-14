@@ -33,7 +33,6 @@ class PredictResponse(BaseModel):
 # App
 # ----------------------------
 def create_app() -> FastAPI:
-    # עדכון גרסה ל-2.1.0 לציון התמיכה בבחירת מודל
     app = FastAPI(title="ML Inference API - Distributed", version="2.1.0")
 
     # Shared storage directory
@@ -51,7 +50,7 @@ def create_app() -> FastAPI:
     @app.post("/process_csv")
     async def process_csv(
         file: UploadFile = File(...),
-        strategy: str = Form("combined")  # קבלת האסטרטגיה מה-UI (ברירת מחדל: combined)
+        strategy: str = Form("combined")
     ):
         """Queue a CSV for processing with a selected model strategy."""
         content = await file.read()
@@ -60,7 +59,7 @@ def create_app() -> FastAPI:
 
         job_id = str(uuid.uuid4())
 
-        # שליחה ל-Redis דרך Celery - כעת כולל את הפרמטר strategy
+
         process_prediction_task.delay(content, job_id, strategy)
 
         return JSONResponse({

@@ -6,7 +6,7 @@ from pathlib import Path
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
-# Import features and model builder
+# Import features and both model builders
 from app.features.model_features import (
     WEAKLINK_FEATURES_LIST,
     DONAPI_FEATURES_LIST,
@@ -14,7 +14,7 @@ from app.features.model_features import (
     INSTALL_FEATURES_LIST,
     ALL_FEATURES
 )
-from app.models.model import build_xgboost
+from app.models.model import build_xgboost, build_random_forest
 
 # Paths setup
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -24,21 +24,32 @@ INPUT_CSV = DATA_DIR / "npm_train.csv"
 
 # Research Strategies
 WEAKLINK_STRATEGY = WEAKLINK_FEATURES_LIST
-DONPAI_STRATEGY = DONAPI_FEATURES_LIST + BUNI_FEATURES_LIST + INSTALL_FEATURES_LIST
+# DONAPI focused on behavioral sequences and static analysis
+DONPAI_STRATEGY = DONAPI_FEATURES_LIST + BUNI_FEATURES_LIST
 
 
-def train_and_save(name, features, X_train, X_val, y_train, y_val):
-    print(f"\n--- Training {name.upper()} Model ---")
-    model = build_xgboost()
+def train_and_save(name, model_type, features, X_train, X_val, y_train, y_val):
+    """
+    Trains a model based on the selected algorithm (XGB or RF).
+    """
+    print(f"\n--- Training {name.upper()} using {model_type.upper()} ---")
+
+    if model_type.lower() == "rf":
+        model = build_random_forest()
+    else:
+        model = build_xgboost()
+
     model.fit(X_train[features], y_train)
 
-    # Save model and its specific feature list for the processor
-    joblib.dump(model, ARTIFACT_DIR / f"{name}_model.pkl")
+    # Save artifacts with model type in filename to prevent overwriting
+    model_filename = f"{name}_{model_type}_model.pkl"
+    joblib.dump(model, ARTIFACT_DIR / model_filename)
+
     with open(ARTIFACT_DIR / f"{name}_features.json", "w") as f:
         json.dump(features, f, indent=2)
 
     acc = accuracy_score(y_val, model.predict(X_val[features]))
-    print(f"Done! {name} Accuracy: {acc * 100:.2f}%")
+    print(f"Done! {name} ({model_type}) Accuracy: {acc * 100:.2f}%")
     return acc
 
 
@@ -52,10 +63,14 @@ def main():
 
     ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Train the 3 variants to see the Gap
-    train_and_save("weaklink", WEAKLINK_STRATEGY, X_train, X_val, y_train, y_val)
-    train_and_save("donpai", DONPAI_STRATEGY, X_train, X_val, y_train, y_val)
-    train_and_save("combined", ALL_FEATURES, X_train, X_val, y_train, y_val)
+    # 1. Weaklink: Based on metadata study (expired domains, scripts)
+    train_and_save("weaklink", "xgb", WEAKLINK_STRATEGY, X_train, X_val, y_train, y_val)
+
+    # 2. Donpai: Built with Random Forest as per the original paper
+    train_and_save("donpai", "rf", DONPAI_STRATEGY, X_train, X_val, y_train, y_val)
+
+    # 3. Combined: Our Hybrid Innovation using XGBoost
+    train_and_save("combined", "xgb", ALL_FEATURES, X_train, X_val, y_train, y_val)
 
 
 if __name__ == "__main__":

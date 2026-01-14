@@ -1,8 +1,8 @@
 import xgboost as xgb
-
+from sklearn.ensemble import RandomForestClassifier
 
 # =========================
-# Base models
+# XGBoost Model Builder
 # =========================
 def build_xgboost():
     return xgb.XGBClassifier(
@@ -11,10 +11,21 @@ def build_xgboost():
         learning_rate=0.07,
         subsample=0.8,
         colsample_bytree=0.8,
-        min_child_weight=2,
         objective="binary:logistic",
         eval_metric="auc",
-        tree_method="hist",
+        n_jobs=-1,
+        random_state=42
+    )
+
+# =========================
+# Random Forest Model Builder
+# =========================
+def build_random_forest():
+    return RandomForestClassifier(
+        n_estimators=500,
+        max_depth=15,
+        min_samples_split=5,
+        class_weight="balanced",
         n_jobs=-1,
         random_state=42
     )
