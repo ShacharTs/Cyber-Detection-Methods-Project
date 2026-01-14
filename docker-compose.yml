@@ -1,11 +1,51 @@
 services:
+  redis:
+    image: redis:alpine
+
+  trainer:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    volumes:
+      - ./artifacts:/app/artifacts
+      - ./data:/app/data
+    command: python -m app.train_models.train
+
   api:
     build:
-      context: .           # Look at the current (root) folder for files
-      dockerfile: docker/Dockerfile  # Find the Dockerfile inside the docker folder
+      context: .
+      dockerfile: docker/Dockerfile
     ports:
-      - "8000:8000"        # Maps your local port 8000 to the container port 8000
-    environment:
-      - MODEL_PATH=/app/artifacts/xgboost_model.pkl
+      - "8000:8000"
     volumes:
-      - ./artifacts:/app/artifacts  # Links your local model folder to the container
+      - ./artifacts:/app/artifacts
+      - shared_results:/shared/results
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_started
+      trainer:
+        condition: service_completed_successfully # Critical Fix
+    command: uvicorn app.api.api:app --host 0.0.0.0 --port 8000
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    command: celery -A app.api.worker.celery_app worker --loglevel=info
+    volumes:
+      - ./artifacts:/app/artifacts
+      - shared_results:/shared/results
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_started
+      trainer:
+        condition: service_completed_successfully # Critical Fix
+    deploy:
+      replicas: 2
+
+volumes:
+  shared_results:

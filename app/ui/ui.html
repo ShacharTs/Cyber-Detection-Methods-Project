@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ML Inference Dashboard</title>
+  <title>ML Inference Dashboard - Worker Edition</title>
   <style>
     :root{
       --bg:#0b1020;
@@ -72,23 +72,13 @@
       color:var(--text);
       outline:none;
     }
-    input[type="text"]::placeholder{color:rgba(255,255,255,.35);}
     input:focus{border-color:rgba(124,58,237,.6); box-shadow:0 0 0 4px rgba(124,58,237,.15);}
 
     .btnrow{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
     button{
-      border:1px solid var(--stroke);
-      background:rgba(255,255,255,.07);
-      color:var(--text);
-      padding:10px 12px;
-      border-radius:14px;
-      cursor:pointer;
-      font-weight:700;
-      font-size:13px;
-      transition:transform .05s ease, background .15s ease;
+      border:1px solid var(--stroke); background:rgba(255,255,255,.07); color:var(--text);
+      padding:10px 12px; border-radius:14px; cursor:pointer; font-weight:700; font-size:13px;
     }
-    button:hover{background:rgba(255,255,255,.10)}
-    button:active{transform:translateY(1px)}
     button.primary{
       border-color:rgba(124,58,237,.55);
       background:linear-gradient(90deg, rgba(124,58,237,.9), rgba(34,211,238,.65));
@@ -99,103 +89,43 @@
     @media (min-width:960px){ .grid{grid-template-columns:1.05fr .95fr;} }
 
     .drop{
-      border:1px dashed rgba(255,255,255,.20);
-      background:rgba(255,255,255,.04);
-      border-radius:16px;
-      padding:16px;
-      display:flex; flex-direction:column; gap:10px;
+      border:1px dashed rgba(255,255,255,.20); background:rgba(255,255,255,.04);
+      border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:10px;
     }
-    .drop.dragover{border-color:rgba(34,211,238,.6); background:rgba(34,211,238,.10);}
     .filemeta{display:flex; gap:10px; flex-wrap:wrap; font-size:12px; color:var(--muted);}
-    .filemeta code{font-family:var(--mono); color:rgba(255,255,255,.88);}
 
-    .stats{
-      display:grid;
-      grid-template-columns:1fr;
-      gap:10px;
-      margin-top:12px;
-    }
+    .stats{ display:grid; grid-template-columns:1fr; gap:10px; margin-top:12px; }
     @media (min-width:520px){ .stats{grid-template-columns:1fr 1fr;} }
-    .stat{
-      padding:12px;
-      border-radius:16px;
-      border:1px solid var(--stroke);
-      background:rgba(255,255,255,.05);
-    }
+    .stat{ padding:12px; border-radius:16px; border:1px solid var(--stroke); background:rgba(255,255,255,.05); }
     .stat .k{font-size:12px; color:var(--muted); margin-bottom:6px;}
     .stat .v{font-size:18px; font-weight:900;}
-    .v.ok{color:var(--ok)} .v.bad{color:var(--bad)} .v.muted{color:rgba(255,255,255,.86); font-weight:800; font-size:14px;}
 
-    /* Accuracy emphasis */
     .accBadge{
       display:inline-flex; align-items:center; gap:10px;
-      padding:10px 12px;
-      border-radius:16px;
-      border:1px solid rgba(255,255,255,.14);
-      background:rgba(0,0,0,.18);
-      margin-top:12px;
+      padding:10px 12px; border-radius:16px; border:1px solid rgba(255,255,255,.14);
+      background:rgba(0,0,0,.18); margin-top:12px;
     }
-    .accBadge .big{
-      font-size:22px; font-weight:950; letter-spacing:.2px;
-    }
-    .accBadge .meta{font-size:12px; color:var(--muted); line-height:1.35}
     .accBadge.ok{border-color:rgba(52,211,153,.35); background:rgba(52,211,153,.08);}
     .accBadge.bad{border-color:rgba(251,113,133,.35); background:rgba(251,113,133,.08);}
-    .accBadge.na{border-color:rgba(255,255,255,.14); background:rgba(255,255,255,.05);}
 
     pre{
-      margin:0;
-      padding:12px;
-      border-radius:16px;
-      border:1px solid var(--stroke);
-      background:rgba(0,0,0,.18);
-      overflow:auto;
-      font-family:var(--mono);
-      font-size:12px;
-      color:rgba(255,255,255,.86);
-      max-height:420px;
-    }
-    .sep{height:1px; background:var(--stroke); margin:12px 0;}
-    .hint{font-size:12px; color:var(--muted); line-height:1.45;}
-    .hint code{
-      font-family:var(--mono);
-      padding:2px 6px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(255,255,255,.06);
-      color:rgba(255,255,255,.88);
-      white-space:nowrap;
+      margin:0; padding:12px; border-radius:16px; border:1px solid var(--stroke);
+      background:rgba(0,0,0,.18); overflow:auto; font-family:var(--mono); font-size:12px;
     }
     .linkbtn{
-      display:inline-flex; align-items:center; gap:8px;
-      text-decoration:none;
-      border-radius:14px;
-      border:1px solid rgba(34,211,238,.55);
-      background:rgba(34,211,238,.12);
-      padding:10px 12px;
-      font-weight:900;
-      font-size:13px;
-      margin-top:10px;
+      display:inline-flex; align-items:center; gap:8px; text-decoration:none;
+      border-radius:14px; border:1px solid rgba(34,211,238,.55); background:rgba(34,211,238,.12);
+      padding:10px 12px; font-weight:900; font-size:13px; margin-top:10px;
     }
-    .linkbtn:hover{background:rgba(34,211,238,.18);}
     .toast{
-      position:fixed; right:16px; bottom:16px;
-      display:flex; flex-direction:column; gap:10px; z-index:99;
+      position:fixed; right:16px; bottom:16px; display:flex; flex-direction:column; gap:10px; z-index:99;
     }
     .toast .msg{
-      width:min(420px, calc(100vw - 32px));
-      padding:12px; border-radius:16px;
-      border:1px solid var(--stroke);
-      background:rgba(0,0,0,.60);
-      box-shadow:var(--shadow);
-      display:flex; gap:10px; align-items:flex-start;
-      animation:pop .18s ease-out;
+      width:min(420px, calc(100vw - 32px)); padding:12px; border-radius:16px;
+      border:1px solid var(--stroke); background:rgba(0,0,0,.80); box-shadow:var(--shadow);
+      display:flex; gap:10px; align-items:flex-start; animation:pop .18s ease-out;
     }
     @keyframes pop{from{transform:translateY(6px); opacity:0;} to{transform:translateY(0); opacity:1;}}
-    .badge{width:10px; height:10px; border-radius:999px; margin-top:4px; background:rgba(255,255,255,.35); flex:0 0 auto;}
-    .badge.ok{background:var(--ok)} .badge.bad{background:var(--bad)} .badge.warn{background:var(--warn)}
-    .toast .t{font-weight:900; font-size:12px; margin-bottom:2px;}
-    .toast .b{font-size:12px; color:var(--muted); line-height:1.35;}
   </style>
 </head>
 
@@ -204,14 +134,10 @@
     <div class="header">
       <div>
         <h1>ML Inference Dashboard</h1>
-        <p class="subtitle">
-          Upload a CSV to get predictions. If it contains a <code style="font-family:var(--mono)">label</code> column,
-          the app will compute and display accuracy, and you can download the processed CSV.
-        </p>
+        <p class="subtitle">Distributed Worker Architecture: Backend queues tasks while Workers process results.</p>
         <div class="pills">
           <div class="pill"><span class="dot" id="dotApi"></span><span id="apiStatus">API: unknown</span></div>
           <div class="pill"><span class="dot warn" id="dotModel"></span><span id="modelStatus">Model: unknown</span></div>
-          <div class="pill"><span class="dot warn"></span><span>Docs: <a href="/docs" target="_blank" rel="noreferrer">/docs</a></span></div>
         </div>
       </div>
       <div class="btnrow">
@@ -222,84 +148,54 @@
     <div class="card">
       <div class="controls">
         <div>
-          <label for="baseUrl">API Base URL (leave empty if same host)</label>
+          <label for="baseUrl">API Base URL</label>
           <input id="baseUrl" type="text" placeholder="e.g. http://localhost:8000" />
-        </div>
-        <div>
-          <label for="topK">Top-K (optional)</label>
-          <input id="topK" type="number" min="1" value="1" />
-        </div>
-        <div class="btnrow" style="justify-content:flex-start; align-self:end;">
-          <button id="btnCopyCurl">Copy curl</button>
-          <button id="btnExampleCsv">Example CSV</button>
         </div>
       </div>
     </div>
 
     <div class="grid">
-      <!-- LEFT: CSV -->
       <div class="card">
         <div class="top">
-          <h2>CSV → predictions (+ accuracy if label exists)</h2>
+          <h2>Worker Status: <span id="workerStatus">Idle</span></h2>
           <div class="btnrow">
             <button id="btnChoose">Choose CSV</button>
-            <input id="csvFile" type="file" accept=".csv,text/csv" style="display:none;" />
+            <input id="csvFile" type="file" accept=".csv" style="display:none;" />
           </div>
         </div>
         <div class="body">
           <div class="drop" id="dropZone">
-            <div class="hint" style="margin:0;">
-              Drag & drop a <code>.csv</code> here, or click <code>Choose CSV</code>. Endpoint: <code>/process_csv</code>
-            </div>
-            <div class="filemeta" id="fileMeta"><span>No file selected</span></div>
-            <div class="btnrow" style="justify-content:flex-start;">
-              <button id="btnUpload" class="primary" disabled>Process</button>
+            <div id="fileMeta"><span>No file selected</span></div>
+            <div class="btnrow">
+              <button id="btnUpload" class="primary" disabled>Start Worker</button>
               <button id="btnClear" disabled>Clear</button>
             </div>
           </div>
 
-          <!-- Accuracy highlight -->
           <div id="accBadge" class="accBadge na" style="display:none;">
-            <div class="big" id="accBig">—</div>
+            <div class="big" style="font-size:22px; font-weight:900;" id="accBig">—</div>
             <div class="meta" id="accMeta">Accuracy</div>
           </div>
 
           <div class="stats">
             <div class="stat">
-              <div class="k">Rows processed</div>
-              <div class="v muted" id="rowsOut">—</div>
+              <div class="k">Rows</div>
+              <div class="v" id="rowsOut">—</div>
             </div>
             <div class="stat">
-              <div class="k">Label detected</div>
-              <div class="v muted" id="labelOut">—</div>
+              <div class="k">Job ID</div>
+              <div class="v" style="font-size:12px; overflow:hidden;" id="jobIdOut">—</div>
             </div>
           </div>
 
-          <a class="linkbtn" id="downloadBtn" href="#" style="display:none;" download>Download result CSV</a>
-
-          <div class="sep"></div>
-          <div class="hint">
-            Output CSV always contains <code>predictions</code>.
-            If input contains <code>label</code>, accuracy is computed as exact match between <code>label</code> and <code>predictions</code>.
-          </div>
+          <a class="linkbtn" id="downloadBtn" href="#" style="display:none;" download>Download Result</a>
         </div>
       </div>
 
-      <!-- RIGHT: OUTPUT -->
       <div class="card">
-        <div class="top">
-          <h2>Last response</h2>
-          <div class="btnrow">
-            <button id="btnCopyJson">Copy</button>
-            <button id="btnClearOut">Clear</button>
-          </div>
-        </div>
+        <div class="top"><h2>Live Logs</h2></div>
         <div class="body">
-          <pre id="outPre">{}</pre>
-          <div class="sep"></div>
-          <div class="hint">
-            If you see an error here, check that <code>MODEL_PATH</code> and <code>FEATURES_PATH</code> are mounted correctly in Docker.
-          </div>
+          <pre id="outPre">Waiting for task...</pre>
         </div>
       </div>
     </div>
@@ -309,218 +205,117 @@
 
 <script>
   const $ = (id) => document.getElementById(id);
-
-  function base() {
-    const v = $("baseUrl").value.trim();
-    return v ? v.replace(/\/+$/, "") : "";
-  }
+  function base() { return $("baseUrl").value.trim().replace(/\/+$/, ""); }
   function show(obj) { $("outPre").textContent = JSON.stringify(obj, null, 2); }
 
   function toast(type, title, body) {
     const wrap = $("toast");
     const el = document.createElement("div");
     el.className = "msg";
-    const badge = document.createElement("div");
-    badge.className = "badge " + (type === "ok" ? "ok" : type === "bad" ? "bad" : "warn");
-    const text = document.createElement("div");
-    text.innerHTML = `<div class="t">${title}</div><div class="b">${body}</div>`;
-    el.appendChild(badge); el.appendChild(text);
+    el.innerHTML = `<div><div style="font-weight:900;">${title}</div><div style="font-size:12px; color:var(--muted);">${body}</div></div>`;
     wrap.appendChild(el);
-    setTimeout(() => { el.style.opacity = "0"; el.style.transform = "translateY(6px)"; }, 3200);
     setTimeout(() => { el.remove(); }, 3600);
   }
 
   async function fetchJSON(url, opts) {
     const res = await fetch(url, opts);
-    const txt = await res.text();
-    let data;
-    try { data = JSON.parse(txt); } catch { data = { raw: txt }; }
-    if (!res.ok) {
-      const msg = data?.detail || data?.error || data?.raw || `HTTP ${res.status}`;
-      throw new Error(msg);
-    }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Request failed");
     return data;
   }
 
-  function setPills(ok, modelPath) {
-    $("dotApi").className = "dot " + (ok ? "ok" : "bad");
-    $("apiStatus").textContent = "API: " + (ok ? "online" : "offline");
-    if (modelPath) {
-      $("dotModel").className = "dot ok";
-      $("modelStatus").textContent = "Model: " + modelPath;
-    } else {
-      $("dotModel").className = "dot warn";
-      $("modelStatus").textContent = "Model: unknown";
-    }
+  // Polling Logic
+  async function pollStatus(jobId) {
+    const btn = $("btnUpload");
+    const statusText = $("workerStatus");
+    const url = `${base()}/status/${jobId}`;
+
+    const interval = setInterval(async () => {
+      try {
+        const data = await fetchJSON(url);
+        show(data);
+
+        if (data.status === "completed") {
+          clearInterval(interval);
+          statusText.textContent = "Done";
+          btn.disabled = false;
+          btn.textContent = "Start Worker";
+
+          // Update Stats
+          $("rowsOut").textContent = data.n_rows;
+          $("accBig").textContent = data.accuracy ? (data.accuracy * 100).toFixed(2) + "%" : "N/A";
+          $("accBadge").style.display = "flex";
+          $("accBadge").className = "accBadge " + (data.accuracy >= 0.5 ? "ok" : "bad");
+
+          // Set Download
+          const dBtn = $("downloadBtn");
+          dBtn.href = `${base()}/download/${jobId}`;
+          dBtn.style.display = "inline-flex";
+
+          toast("ok", "Worker Finished", `Processed ${data.n_rows} rows.`);
+        }
+      } catch (e) {
+        clearInterval(interval);
+        statusText.textContent = "Error";
+        btn.disabled = false;
+        toast("bad", "Polling Failed", e.message);
+      }
+    }, 2000); // Poll every 2 seconds
   }
 
-  async function doHealth() {
-    try {
-      const data = await fetchJSON(base() + "/health", { method: "GET" });
-      setPills(true, data.model_path || data.modelPath);
-      show(data);
-      toast("ok", "Health OK", "API is reachable.");
-    } catch (e) {
-      setPills(false);
-      show({ error: e.message });
-      toast("bad", "Health failed", e.message);
-    }
-  }
-
-  // Output controls
-  $("btnCopyJson").addEventListener("click", async () => {
-    await navigator.clipboard.writeText($("outPre").textContent);
-    toast("ok", "Copied", "Response JSON copied.");
-  });
-  $("btnClearOut").addEventListener("click", () => show({}));
-
-  // Buttons
-  $("btnHealth").addEventListener("click", doHealth);
-  $("btnCopyCurl").addEventListener("click", async () => {
-    const url = (base() || "") + "/process_csv";
-    const txt = `curl -X POST "${url}" -F "file=@your.csv"`;
-    await navigator.clipboard.writeText(txt);
-    toast("ok", "Copied", "Curl command copied.");
-  });
-
-  // Example CSV
-  $("btnExampleCsv").addEventListener("click", () => {
-    const csv = "num_dependencies,num_dev_dependencies,description_length,num_js_files,num_maintainers,num_contributors,repository_exists,license_exists,inactive_package_flag,has_install_script,num_install_scripts,bf_net_requests,bf_fs_ops,bf_proc_exec,bf_dynamic_exec,bf_env_access,buni_DYNAMIC_CODE_EXEC,buni_NETWORK_COMM,buni_PROCESS_EXECUTION,identifier_entropy,num_lines,label\n" +
-                "1,0,120,5,1,2,1,1,0,0,0,0,0,0,0,0,0,0,0,3.2,200,0\n" +
-                "3,1,80,2,2,1,1,0,1,1,1,2,1,0,0,0,0,1,0,2.1,140,1\n";
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "example_with_label.csv";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    toast("ok", "Downloaded", "Example CSV created.");
-  });
-
-  // CSV selection / drag&drop
-  const drop = $("dropZone");
-  const fileInput = $("csvFile");
-  let selectedFile = null;
-
-  function resetAccUI() {
-    $("rowsOut").textContent = "—";
-    $("labelOut").textContent = "—";
-    $("downloadBtn").style.display = "none";
-    $("accBadge").style.display = "none";
-    $("accBig").textContent = "—";
-    $("accMeta").textContent = "Accuracy";
-    $("accBadge").className = "accBadge na";
-  }
-
-  function setFile(file) {
-    selectedFile = file;
-    resetAccUI();
-    if (!file) {
-      $("fileMeta").innerHTML = "<span>No file selected</span>";
-      $("btnUpload").disabled = true;
-      $("btnClear").disabled = true;
-      return;
-    }
-    const kb = Math.round(file.size / 1024);
-    $("fileMeta").innerHTML = `
-      <span>Selected: <code>${file.name}</code></span>
-      <span>Size: <code>${kb} KB</code></span>
-      <span>Type: <code>${file.type || "text/csv"}</code></span>
-    `;
-    $("btnUpload").disabled = false;
-    $("btnClear").disabled = false;
-  }
-
-  $("btnChoose").addEventListener("click", () => fileInput.click());
-  fileInput.addEventListener("change", () => setFile(fileInput.files[0] || null));
-  $("btnClear").addEventListener("click", () => { fileInput.value=""; setFile(null); toast("ok","Cleared","Selection cleared."); });
-
-  drop.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("dragover"); });
-  drop.addEventListener("dragleave", () => drop.classList.remove("dragover"));
-  drop.addEventListener("drop", (e) => {
-    e.preventDefault();
-    drop.classList.remove("dragover");
-    const f = e.dataTransfer.files && e.dataTransfer.files[0];
-    if (!f) return;
-    if (!f.name.toLowerCase().endsWith(".csv")) { toast("warn","Not a CSV","Please drop a .csv file."); return; }
-    setFile(f);
-    toast("ok","File selected", f.name);
-  });
-
-  // Process CSV → shows accuracy if present
+  // Upload Logic
   $("btnUpload").addEventListener("click", async () => {
-    if (!selectedFile) return;
+    const file = $("csvFile").files[0];
+    if (!file) return;
 
     const btn = $("btnUpload");
     btn.disabled = true;
-    btn.textContent = "Processing...";
-    resetAccUI();
+    btn.textContent = "Queueing...";
+    $("workerStatus").textContent = "Queueing...";
 
     try {
       const form = new FormData();
-      form.append("file", selectedFile);
+      form.append("file", file);
 
+      // Initial request starts the worker
       const data = await fetchJSON(base() + "/process_csv", { method: "POST", body: form });
       show(data);
 
-      const n = data.n_rows ?? data.nRows ?? null;
-      $("rowsOut").textContent = (n === null ? "—" : String(n));
+      $("jobIdOut").textContent = data.job_id;
+      $("workerStatus").textContent = "Processing...";
+      pollStatus(data.job_id);
 
-      const hasLabel = !!data.has_label;
-      $("labelOut").textContent = hasLabel ? "Yes" : "No";
-      $("labelOut").className = "v " + (hasLabel ? "ok" : "muted");
-
-      // === Accuracy display (main ask) ===
-      // Show only if label exists and accuracy is provided
-      if (hasLabel && data.accuracy !== null && data.accuracy !== undefined) {
-        const acc = Number(data.accuracy);
-        const pct = (acc * 100).toFixed(2) + "%";
-
-        $("accBadge").style.display = "";
-        $("accBig").textContent = pct;
-        $("accMeta").textContent = "Accuracy (label vs predictions)";
-
-        // Style badge by threshold (cosmetic)
-        if (!Number.isFinite(acc)) {
-          $("accBadge").className = "accBadge na";
-          $("accBig").textContent = "—";
-          $("accMeta").textContent = "Accuracy (invalid number)";
-        } else if (acc >= 0.5) {
-          $("accBadge").className = "accBadge ok";
-        } else {
-          $("accBadge").className = "accBadge bad";
-        }
-      } else {
-        $("accBadge").style.display = "";
-        $("accBadge").className = "accBadge na";
-        $("accBig").textContent = "N/A";
-        $("accMeta").textContent = "No label column → accuracy not computed";
-      }
-
-      // Download
-      if (data.download_url) {
-        const url = (base() || "") + data.download_url;
-        const a = $("downloadBtn");
-        a.href = url;
-        a.style.display = "";
-        a.setAttribute("download", data.job_id ? `result_${data.job_id}.csv` : "result.csv");
-      }
-
-      toast("ok", "Done", hasLabel ? "Accuracy computed and file is ready." : "Predictions file is ready.");
     } catch (e) {
       show({ error: e.message });
-      toast("bad", "Failed", e.message);
-    } finally {
       btn.disabled = false;
-      btn.textContent = "Process";
+      btn.textContent = "Start Worker";
+      toast("bad", "Failed to queue", e.message);
     }
   });
 
-  // Initial health check (best effort)
-  doHealth();
+  // UI Helpers
+  $("btnChoose").addEventListener("click", () => $("csvFile").click());
+  $("csvFile").addEventListener("change", (e) => {
+    const f = e.target.files[0];
+    if (f) {
+      $("fileMeta").textContent = `Selected: ${f.name} (${Math.round(f.size/1024)} KB)`;
+      $("btnUpload").disabled = false;
+      $("btnClear").disabled = false;
+    }
+  });
+
+  $("btnHealth").addEventListener("click", async () => {
+    try {
+      const data = await fetchJSON(base() + "/health");
+      $("dotApi").className = "dot ok";
+      $("apiStatus").textContent = "API: Online";
+      show(data);
+      toast("ok", "Health Check", "Backend is reachable.");
+    } catch (e) {
+      $("dotApi").className = "dot bad";
+      toast("bad", "Offline", e.message);
+    }
+  });
 </script>
 </body>
 </html>
