@@ -1,0 +1,11 @@
+services:
+  api:
+    build:
+      context: .           # Look at the current (root) folder for files
+      dockerfile: docker/Dockerfile  # Find the Dockerfile inside the docker folder
+    ports:
+      - "8000:8000"        # Maps your local port 8000 to the container port 8000
+    environment:
+      - MODEL_PATH=/app/artifacts/xgboost_model.pkl
+    volumes:
+      - ./artifacts:/app/artifacts  # Links your local model folder to the container
