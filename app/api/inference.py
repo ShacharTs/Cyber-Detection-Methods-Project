@@ -8,13 +8,18 @@ from typing import Any, Dict
 
 class InferenceEngine:
     def __init__(self) -> None:
-        # Use the same artifact directory as the trainer
         self.artifact_dir = Path(os.getenv("ARTIFACT_DIR", "/app/artifacts"))
-        self.model_names = ["weaklink", "donpai", "combined"]
+
+        self.model_names = [
+            "weaklink",
+            "donpai",
+            "combined",
+            "combined_voting"
+        ]
+
         self.models = {}
         self.features = {}
         self._loaded = False
-
 
     def _ensure_loaded(self):
         if self._loaded:
@@ -23,18 +28,21 @@ class InferenceEngine:
         strategy_mapping = {
             "weaklink": "weaklink_xgb",
             "donpai": "donpai_rf",
-            "combined": "combined_xgb"
+            "combined": "combined_xgb",
+            "combined_voting": "combined_voting_voting"
         }
 
-        for name, file_prefix in strategy_mapping.items():
-            m_path = self.artifact_dir / f"{file_prefix}_model.pkl"
-            f_path = self.artifact_dir / f"{name}_features.json"
+        for name, prefix in strategy_mapping.items():
+            model_path = self.artifact_dir / f"{prefix}_model.pkl"
+            feat_path = self.artifact_dir / f"{name}_features.json"
 
-            if m_path.exists() and f_path.exists():
-                self.models[name] = joblib.load(m_path)
-                with open(f_path, "r") as f:
+            if model_path.exists() and feat_path.exists():
+                self.models[name] = joblib.load(model_path)
+                with open(feat_path, "r") as f:
                     self.features[name] = json.load(f)
+
         self._loaded = True
+
 
     def predict_all(self, df_raw: pd.DataFrame, processor: Any) -> Dict[str, list]:
         """Runs all strategies as required by worker.py."""

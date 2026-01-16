@@ -1,9 +1,9 @@
-import os
 import json
+import os
 from pathlib import Path
-from celery import Celery
-import pandas as pd
+
 import numpy as np
+from celery import Celery
 from sklearn.metrics import precision_recall_fscore_support
 
 # Initialize Celery
@@ -82,7 +82,8 @@ def process_prediction_task(
     # --------------------------------------------------
     # Feature Activity Analysis (FIXED)
     # --------------------------------------------------
-    df_raw["temp_pred"] = all_preds.get("combined", [])
+    primary = "combined_voting" if "combined_voting" in all_preds else "combined"
+    df_raw["temp_pred"] = all_preds[primary]
 
     # ✅ רק פיצ'רים שהמודל באמת משתמש בהם
     feature_cols = [f for f in ALL_FEATURES if f in df_raw.columns]
