@@ -18,32 +18,15 @@ INSTALL_FEATURES_LIST = [
 ]
 
 # =========================
-# DONAPI
-# =========================
-DONAPI_FEATURES_LIST = [
-    "bf_net_requests",
-    "bf_fs_ops",
-    "bf_proc_exec",
-    "bf_dynamic_exec",
-    "bf_env_access",
-]
-
-# =========================
-# BUNI – Atomic behaviors
+# BUNI – Atomic behaviors (STATIC)
 # =========================
 BUNI_FEATURES_LIST = [
-    "buni_DYNAMIC_CODE_EXEC",
-    "buni_NETWORK_COMM",
-    "buni_PROCESS_EXECUTION",
+    "buni_DYNAMIC_CODE_EXEC",   # eval, new Function
+    "buni_NETWORK_COMM",        # http, https, fetch
+    "buni_PROCESS_EXECUTION",   # child_process
 ]
 
-# =========================
-# Static / Obfuscation
-# =========================
-STATIC_FEATURES_LIST = [
-    "identifier_entropy",
-    "num_lines",
-]
+
 
 # =========================
 # FINAL feature set
@@ -51,9 +34,7 @@ STATIC_FEATURES_LIST = [
 ALL_FEATURES = (
     WEAKLINK_FEATURES_LIST +
     INSTALL_FEATURES_LIST +
-    DONAPI_FEATURES_LIST +
-    BUNI_FEATURES_LIST +
-    STATIC_FEATURES_LIST
+    BUNI_FEATURES_LIST
 )
 
 INSTALL_KEYS = {"install", "preinstall", "postinstall", "prepare"}

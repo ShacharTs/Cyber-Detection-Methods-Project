@@ -9,10 +9,8 @@ from sklearn.metrics import accuracy_score
 # Import features and both model builders
 from app.features.model_features import (
     WEAKLINK_FEATURES_LIST,
-    DONAPI_FEATURES_LIST,
     BUNI_FEATURES_LIST,
     INSTALL_FEATURES_LIST,
-    STATIC_FEATURES_LIST,
     ALL_FEATURES
 )
 from app.models.model import build_xgboost, build_random_forest
@@ -29,10 +27,9 @@ WEAKLINK_STRATEGY = sorted(list(set(WEAKLINK_FEATURES_LIST)))
 
 # DonPai Strategy: Focused on behavioral sequences and static analysis patterns
 DONPAI_STRATEGY = sorted(list(set(
-    DONAPI_FEATURES_LIST +
     BUNI_FEATURES_LIST +
-    INSTALL_FEATURES_LIST +
-    STATIC_FEATURES_LIST
+    INSTALL_FEATURES_LIST
+
 )))
 
 # Hybrid Strategy: Our Innovation - Combining all features for maximum detection

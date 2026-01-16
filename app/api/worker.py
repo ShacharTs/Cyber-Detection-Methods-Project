@@ -15,6 +15,7 @@ celery_app = Celery(
 
 from app.api.inference import InferenceEngine
 from app.api.processor import Processor
+from app.features.model_features import ALL_FEATURES
 
 processor = Processor()
 engine = InferenceEngine()
@@ -22,8 +23,12 @@ RESULTS_DIR = Path(os.getenv("RESULTS_DIR", "/shared/results"))
 
 
 @celery_app.task(name="process_prediction_task")
-def process_prediction_task(csv_content: bytes, job_id: str, strategy: str = "combined",
-                            original_filename: str = "data.csv"):
+def process_prediction_task(
+    csv_content: bytes,
+    job_id: str,
+    strategy: str = "combined",
+    original_filename: str = "data.csv"
+):
     # Load raw data
     df_raw = processor.csv_bytes_to_raw_df(csv_content)
 
@@ -43,12 +48,14 @@ def process_prediction_task(csv_content: bytes, job_id: str, strategy: str = "co
         }
 
         if has_ground_truth:
-            y_true = df_raw["label"].astype(float).astype(int)
+            y_true = df_raw["label"].astype(int)
             y_pred = np.array(preds).astype(int)
 
-            # Precision, Recall, and F1 calculation
             prec, rec, f1, _ = precision_recall_fscore_support(
-                y_true, y_pred, average='binary', pos_label=1, zero_division=0
+                y_true, y_pred,
+                average="binary",
+                pos_label=1,
+                zero_division=0
             )
 
             metrics_summary[name] = {
@@ -58,31 +65,39 @@ def process_prediction_task(csv_content: bytes, job_id: str, strategy: str = "co
                 "f1_score": float(f1)
             }
 
-    # Pie Chart Logic (Who detected what)
-    w_preds = np.array(all_preds['weaklink'])
-    d_preds = np.array(all_preds['donpai'])
+    # --------------------------------------------------
+    # Overlap analysis (רק אם DonPai קיים)
+    # --------------------------------------------------
+    if "weaklink" in all_preds and "donpai" in all_preds:
+        w_preds = np.array(all_preds["weaklink"])
+        d_preds = np.array(all_preds["donpai"])
 
-    prediction_stats["overlap_analysis"] = {
-        "Both Detected": int(sum((w_preds == 1) & (d_preds == 1))),
-        "WeakLink Only": int(sum((w_preds == 1) & (d_preds == 0))),
-        "DonPai Only": int(sum((w_preds == 0) & (d_preds == 1))),
-        "Total Benign": int(sum((w_preds == 0) & (d_preds == 0)))
-    }
+        prediction_stats["overlap_analysis"] = {
+            "Both Detected": int(((w_preds == 1) & (d_preds == 1)).sum()),
+            "WeakLink Only": int(((w_preds == 1) & (d_preds == 0)).sum()),
+            "DonPai Only": int(((w_preds == 0) & (d_preds == 1)).sum()),
+            "Total Benign": int(((w_preds == 0) & (d_preds == 0)).sum())
+        }
 
-    # Feature Activity (Total count of active behaviors > 0)
-    exclude = ["label", "package_name", "Package Name", "Ground Truth", "temp_pred"]
-    feature_cols = [c for c in df_raw.columns if c not in exclude]
-    df_raw['temp_pred'] = all_preds['combined']
+    # --------------------------------------------------
+    # Feature Activity Analysis (FIXED)
+    # --------------------------------------------------
+    df_raw["temp_pred"] = all_preds.get("combined", [])
 
-    malicious_df = df_raw[df_raw['temp_pred'] == 1]
-    benign_df = df_raw[df_raw['temp_pred'] == 0]
+    # ✅ רק פיצ'רים שהמודל באמת משתמש בהם
+    feature_cols = [f for f in ALL_FEATURES if f in df_raw.columns]
+
+    malicious_df = df_raw[df_raw["temp_pred"] == 1]
+    benign_df = df_raw[df_raw["temp_pred"] == 0]
 
     prediction_stats["feature_analysis"] = {
         "mal_count": (malicious_df[feature_cols] > 0).sum().to_dict(),
         "ben_count": (benign_df[feature_cols] > 0).sum().to_dict()
     }
 
+    # --------------------------------------------------
     # Save results
+    # --------------------------------------------------
     meta_path = RESULTS_DIR / f"{job_id}.json"
     with open(meta_path, "w") as f:
         json.dump({
