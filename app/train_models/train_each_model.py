@@ -12,6 +12,7 @@ from app.features.model_features import (
     DONAPI_FEATURES_LIST,
     BUNI_FEATURES_LIST,
     INSTALL_FEATURES_LIST,
+    STATIC_FEATURES_LIST,
     ALL_FEATURES
 )
 from app.models.model import build_xgboost, build_random_forest
@@ -25,7 +26,12 @@ INPUT_CSV = DATA_DIR / "npm_train.csv"
 # Research Strategies
 WEAKLINK_STRATEGY = WEAKLINK_FEATURES_LIST
 # DONAPI focused on behavioral sequences and static analysis
-DONPAI_STRATEGY = DONAPI_FEATURES_LIST + BUNI_FEATURES_LIST
+DONPAI_STRATEGY = (
+    DONAPI_FEATURES_LIST +
+    BUNI_FEATURES_LIST +
+    INSTALL_FEATURES_LIST +
+    STATIC_FEATURES_LIST
+)
 
 
 def train_and_save(name, model_type, features, X_train, X_val, y_train, y_val):
