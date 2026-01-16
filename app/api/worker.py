@@ -24,29 +24,28 @@ RESULTS_DIR = Path(os.getenv("RESULTS_DIR", "/shared/results"))
 def process_prediction_task(csv_content: bytes, job_id: str, strategy: str = "combined",
                             original_filename: str = "data.csv"):
     """
-    Processes CSV for malware detection.
-    Exports a comprehensive CSV with package name, ground truth (if exists), and all model predictions.
+    Processes CSV for malware detection and prepares comparative research data.
     """
-    # 1. Load raw data
+    # 1. Load data
     df_raw = processor.csv_bytes_to_raw_df(csv_content)
 
-    # 2. Run inference for ALL models (WeakLink, DonPai, Combined)
+    # 2. Run inference for ALL models
     all_preds = engine.predict_all(df_raw, processor)
 
-    # 3. Comprehensive Analysis (Metrics & Distribution)
+    # 3. Metrics and Distribution Calculation
     metrics_summary = {}
     prediction_stats = {}
     has_ground_truth = "label" in df_raw.columns
 
     for name, preds in all_preds.items():
-        # Calculate malicious/benign distribution for UI graphs
+        # Distribution stats for scan mode graphs
         mal_count = int(sum(preds))
         prediction_stats[name] = {
             "malicious": mal_count,
             "benign": len(preds) - mal_count
         }
 
-        # Calculate scientific metrics if labels exist
+        # Calculate performance metrics if labels are available
         if has_ground_truth:
             y_true = df_raw["label"].astype(str)
             y_pred = pd.Series(preds).astype(str)
@@ -55,11 +54,13 @@ def process_prediction_task(csv_content: bytes, job_id: str, strategy: str = "co
                 y_true, y_pred, average='binary', pos_label="1", zero_division=0
             )
             metrics_summary[name] = {
-                "accuracy": float(acc), "precision": float(prec),
-                "recall": float(rec), "f1_score": float(f1)
+                "accuracy": float(acc),
+                "precision": float(prec),
+                "recall": float(rec),
+                "f1_score": float(f1)
             }
 
-    # 4. Save Metadata for the Dashboard
+    # 4. Save Metadata for UI
     meta_path = RESULTS_DIR / f"{job_id}.json"
     with open(meta_path, "w") as f:
         selected_metrics = metrics_summary.get(strategy) if has_ground_truth else None
@@ -74,32 +75,33 @@ def process_prediction_task(csv_content: bytes, job_id: str, strategy: str = "co
             "n_rows": len(df_raw)
         }, f)
 
-    # 5. Build Final Filtered CSV for Download
-    # Identify package name column
+    # 5. Filter and Save Output CSV for Download
+    # Identify the package name column
     package_col = next((col for col in df_raw.columns if col.lower() in ['package_name', 'name']), df_raw.columns[0])
 
-    cols_to_export = [package_col]
+    output_cols = [package_col]
     df_raw.rename(columns={package_col: "Package Name"}, inplace=True)
-    cols_to_export = ["Package Name"]
+    output_cols = ["Package Name"]
 
-    # Add Ground Truth column if labels exist in the original CSV
+    # Add Ground Truth (Malicious/Benign) if label column exists
     if has_ground_truth:
-        df_raw["Ground Truth"] = df_raw["label"].astype(str).map(
-            {"1": "Malicious", "0": "Benign", "1.0": "Malicious", "0.0": "Benign"})
-        cols_to_export.append("Ground Truth")
+        df_raw["Ground Truth"] = df_raw["label"].astype(str).map({
+            "1": "Malicious", "0": "Benign", "1.0": "Malicious", "0.0": "Benign"
+        })
+        output_cols.append("Ground Truth")
 
-    # Add columns for each model prediction
-    model_mapping = {
+    # Add predictions for each model
+    model_labels = {
         "weaklink": "WeakLink Prediction",
         "donpai": "DonPai Prediction",
         "combined": "Hybrid Prediction (Ours)"
     }
 
-    for model_key, col_name in model_mapping.items():
+    for model_key, label in model_labels.items():
         if model_key in all_preds:
-            df_raw[col_name] = pd.Series(all_preds[model_key]).map({1: "Malicious", 0: "Benign"})
-            cols_to_export.append(col_name)
+            df_raw[label] = pd.Series(all_preds[model_key]).map({1: "Malicious", 0: "Benign"})
+            output_cols.append(label)
 
-    # Export only the selected columns
-    df_final = df_raw[cols_to_export].copy()
+    # Save final filtered CSV
+    df_final = df_raw[output_cols].copy()
     df_final.to_csv(RESULTS_DIR / f"{job_id}.csv", index=False)
