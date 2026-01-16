@@ -5,7 +5,6 @@ WEAKLINK_FEATURES_LIST = [
     "num_dependencies",
     "num_dev_dependencies",
     "num_maintainers",
-    "num_contributors",
     "inactive_package_flag",
 ]
 
