@@ -19,7 +19,7 @@ class InferenceEngine:
     def _ensure_loaded(self):
         if self._loaded:
             return
-        # מיפוי מדויק לקבצים שנוצרו ב-train.py
+
         strategy_mapping = {
             "weaklink": "weaklink_xgb",
             "donpai": "donpai_rf",

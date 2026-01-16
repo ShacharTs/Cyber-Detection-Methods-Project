@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from io import BytesIO
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import pandas as pd
 
