@@ -2,15 +2,15 @@
 # Weak-Link
 # =========================
 WEAKLINK_FEATURES_LIST = [
-    "num_dependencies",
-    "num_dev_dependencies",
-    "description_length",
-    "num_js_files",
-    "num_maintainers",
-    "num_contributors",
-    "repository_exists",
-    "license_exists",
-    "inactive_package_flag",
+    "num_dependencies",      # Valid: Part of the attack surface [cite: 127]
+    "num_dev_dependencies",  # Valid: Part of the attack surface [cite: 127]
+    # "description_length",  # REMOVE: Potential OF. Not a weak link signal
+    # "num_js_files",        # REMOVE: Potential OF. Statistical noise, not a security risk
+    "num_maintainers",       # Valid: W4 - Too many maintainers [cite: 243-248]
+    "num_contributors",      # Valid: W5 - Too many contributors [cite: 262-264]
+    # "repository_exists",   # REMOVE: Used only for data cleaning, not as a predictor
+    # "license_exists",      # REMOVE: Used only for data cleaning, not as a predictor
+    "inactive_package_flag", # Valid: W3 - Unmaintained package [cite: 218-219]
 ]
 
 # =========================
