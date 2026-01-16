@@ -2,259 +2,192 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>NPM Malware Detection - Executive Dashboard</title>
+  <title>Security Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
   <style>
     :root{
-      --bg:#0b1020; --stroke:rgba(255,255,255,.12);
-      --text:rgba(255,255,255,.95); --muted:rgba(255,255,255,.6);
-      --ok:#34d399; --bad:#fb7185; --accent:#7c3aed; --accent2:#22d3ee;
-      --shadow:0 20px 60px rgba(0,0,0,0.5); --radius:20px;
-      --sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+      --bg:#0b1020; --card:#1e293b; --stroke:rgba(255,255,255,0.08);
+      --accent:#7c3aed; --accent2:#22d3ee; --ok:#34d399; --bad:#fb7185; --radius:24px;
     }
-    *{box-sizing:border-box}
-    body{
-      margin:0; height:100vh; overflow:hidden; /* Lock screen height */
-      color:var(--text); font-family:var(--sans);
-      background: radial-gradient(circle at 10% 10%, rgba(124,58,237,0.15), transparent 40%), var(--bg);
-      display: flex; flex-direction: column;
-    }
-    .container{
-      width: 100%; max-width: 1600px; margin: 0 auto;
-      height: 100vh; display: flex; flex-direction: column; padding: 20px 30px;
+    body{ margin:0; background:var(--bg); color:#f1f5f9; font-family:'Inter', sans-serif; overflow-y:auto; padding-bottom:80px; }
+    .container{ max-width: 1200px; margin: 0 auto; padding: 60px; }
+
+    .dashboard-grid { display: grid; grid-template-columns: 350px 1fr; gap: 50px; margin-bottom: 50px; }
+    .card {
+      background: var(--card); border: 1px solid var(--stroke); border-radius: var(--radius);
+      padding: 40px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); position: relative;
     }
 
-    .header{ flex: 0 0 auto; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
-    h1{ margin:0; font-size:28px; font-weight: 800; color: #fff; }
+    h2{ font-size: 13px; color: var(--accent2); text-transform: uppercase; letter-spacing: 2px; margin-top:0; }
 
-    /* Layout Floors */
-    .floor-1{ flex: 0 0 35%; display: grid; grid-template-columns: 380px 1fr; gap: 20px; margin-bottom: 20px; min-height: 0; }
-    .floor-2{ flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    /* Hidden by default */
+    .s-el { display: none; }
+    .section-sep { margin: 100px 0 50px 0; padding-top: 50px; border-top: 1px solid var(--stroke); display:none; }
 
-    .card{
-      border-radius:var(--radius); border:1px solid var(--stroke);
-      background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px);
-      box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden; height: 100%;
-    }
-    .top{
-      padding:12px 24px; border-bottom:1px solid var(--stroke);
-      display:flex; justify-content:space-between; align-items:center;
-      background: rgba(255,255,255,0.03); flex: 0 0 auto;
-    }
-    .top h2{ margin:0; font-size:14px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent2); }
-    .body{ padding:20px 24px; flex: 1; overflow: hidden; display: flex; flex-direction: column; justify-content: center; }
+    .m-table { width: 100%; border-collapse: collapse; margin-top: 25px; }
+    .m-table th { text-align: left; font-size: 11px; color: rgba(255,255,255,0.4); padding-bottom: 15px; }
+    .m-table td { padding: 18px 0; border-bottom: 1px solid var(--stroke); font-size: 15px; }
+    .val-highlight { color: var(--ok); font-weight: 800; font-size: 18px; }
 
-    /* Buttons */
-    .btnrow{ display:flex; gap:10px; }
-    button{
-      border:1px solid var(--stroke); background: #1a1f2e; color: #fff;
-      padding:10px 18px; border-radius:12px; cursor:pointer; font-weight:700;
-      transition: all 0.2s; font-size: 13px;
-    }
-    button.primary{ background: var(--accent); border: none; }
-    button.secondary{ border:1px solid var(--accent2); color: var(--accent2); background: transparent; }
-    button:hover:not(:disabled){ transform: translateY(-2px); filter: brightness(1.2); }
-    button:disabled{ opacity:0.3; }
-
-    /* Table styling */
-    .comp-table { width: 100%; border-collapse: collapse; }
-    .comp-table th, .comp-table td { padding: 12px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); }
-    .comp-table th { color: var(--muted); font-size: 11px; text-transform: uppercase; }
-    .model-name { font-weight: 700; color: #fff; text-align: left !important; font-size: 15px; }
-    .val-highlight { font-size: 24px; font-weight: 900; color: var(--ok); }
-
-    .noLabelBox { display:none; padding:12px; border-radius:12px; border:1px solid #fbbf24; background:rgba(251, 191, 36, 0.1); color: #fbbf24; font-weight: 700; text-align: center; font-size: 14px; }
-    .linkbtn{ display:none; align-items:center; justify-content:center; gap:8px; text-decoration:none; border-radius:12px; border:1px solid var(--accent2); background: rgba(34,211,238, 0.05); padding:10px; font-weight:800; color: var(--accent2); margin-top: 10px; font-size: 14px; }
-
-    /* Graph sizing */
-    #chartWrapper { width: 100%; height: 100%; position: relative; }
-    canvas { width: 100% !important; height: 100% !important; }
+    button { background: var(--accent); color:#fff; border:none; padding:15px 25px; border-radius:14px; cursor:pointer; font-weight:bold; width:100%; transition:0.2s; }
+    .save-btn { position: absolute; top: 20px; right: 20px; width:auto; padding:6px 12px; font-size:10px; background:rgba(255,255,255,0.05); border:1px solid var(--accent2); color:var(--accent2); border-radius:10px; }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="header">
-      <h1>NPM Malware Detection Dashboard</h1>
-      <div style="font-size: 14px; color:var(--muted)">System Status: <span id="workerStatus" style="color:var(--accent2); font-weight: 800;">Idle</span></div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:60px;">
+      <h1 style="margin:0; font-size:28px; font-weight:900;">NPM Hybrid Security Engine</h1>
+      <div id="status" style="opacity:0.6; font-weight:bold; letter-spacing:1px; border:1px solid var(--accent2); padding:6px 15px; border-radius:10px;">SYSTEM: READY</div>
     </div>
 
-    <div class="floor-1">
+    <div class="dashboard-grid">
       <div class="card">
-        <div class="top"><h2>Controls</h2></div>
-        <div class="body">
-          <div id="fileMeta" style="font-size:13px; color:var(--muted); margin-bottom:15px;">Ready for dataset input.</div>
-          <div class="btnrow">
-            <button id="btnUpload" class="primary" disabled>Run Comparison</button>
-            <button id="btnChoose" class="secondary">Select CSV</button>
-          </div>
-          <input id="csvFile" type="file" accept=".csv" style="display:none;" />
-          <a class="linkbtn" id="downloadBtn" href="#" download>📦 Export Results CSV</a>
-        </div>
+        <h2>Actions</h2>
+        <button id="btnChoose" style="background:#334155; margin-bottom:15px;">📁 Select Dataset</button>
+        <button id="btnUpload" disabled>🚀 Run Analysis</button>
+        <input type="file" id="csvFile" style="display:none;" />
+        <a id="dlBtn" href="#" download style="display:none; text-decoration:none; margin-top:30px;">
+            <button style="background:transparent; border:2px solid var(--ok); color:var(--ok);">📥 Export Detailed CSV</button>
+        </a>
       </div>
 
-      <div class="card">
-        <div class="top"><h2>Comparative Performance Metrics (%)</h2></div>
-        <div class="body">
-          <table id="resultsTable" class="comp-table" style="display:none;">
-            <thead>
-              <tr><th style="text-align: left;">Model Strategy</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1-Score</th></tr>
-            </thead>
-            <tbody id="resultsBody"></tbody>
-          </table>
-          <div id="noLabelMsg" class="noLabelBox">⚠️ SCAN MODE: Using model inference logic (no labels found).</div>
-        </div>
+      <div id="metricsCard" class="card s-el">
+        <h2>Performance Benchmarks (Labels detected)</h2>
+        <table class="m-table">
+          <thead><tr><th>Strategy</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1-Score</th></tr></thead>
+          <tbody id="metricsBody"></tbody>
+        </table>
       </div>
     </div>
 
-    <div class="floor-2">
-      <div class="card">
-        <div class="top">
-          <h2 id="chartTitle">Research Visualizations</h2>
-          <button id="btnPrintChart" class="secondary" style="padding: 4px 12px; font-size: 11px; display:none;">Save Graph Image</button>
+    <div class="section-sep s-el"><h2>1. Model Performance (%)</h2></div>
+    <div class="card s-el">
+        <button class="save-btn" onclick="save('perfChart')">DOWNLOAD PNG</button>
+        <div style="height:400px;"><canvas id="perfChart"></canvas></div>
+    </div>
+
+    <div class="section-sep s-el"><h2>2. Detection Strategy Distribution</h2></div>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:50px;" class="s-el">
+        <div class="card">
+            <button class="save-btn" onclick="save('distChart')">DOWNLOAD PNG</button>
+            <div style="height:350px;"><canvas id="distChart"></canvas></div>
         </div>
-        <div class="body">
-          <div id="chartWrapper">
-            <canvas id="perfChart"></canvas>
-            <div id="chartPlaceholder" style="position: absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:var(--muted);">
-               Upload and analyze data to generate comparative charts
-            </div>
-          </div>
+        <div class="card">
+            <button class="save-btn" onclick="save('overlapChart')">DOWNLOAD PNG</button>
+            <div style="height:350px;"><canvas id="overlapChart"></canvas></div>
         </div>
-      </div>
+    </div>
+
+    <div class="section-sep s-el"><h2>3. Behavioral Intensity (Total Package Count)</h2></div>
+    <div class="card s-el" style="height: 750px;">
+        <button class="save-btn" onclick="save('freqChart')">DOWNLOAD PNG</button>
+        <div style="height:100%;"><canvas id="freqChart"></canvas></div>
     </div>
   </div>
 
 <script>
   const $ = (id) => document.getElementById(id);
-  const base = "http://localhost:8000";
-  let myChart = null;
-  Chart.register(ChartDataLabels);
+  let charts = {};
 
-  async function pollStatus(jobId) {
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch(`${base}/status/${jobId}`);
-        const data = await res.json();
-        if (data.status === "completed") {
-          clearInterval(interval);
-          $("workerStatus").textContent = "Finished";
-          $("btnUpload").disabled = false;
-          if (data.has_ground_truth) {
-            $("noLabelMsg").style.display = "none";
-            $("resultsTable").style.display = "table";
-            $("chartTitle").textContent = "Full Performance Metrics Comparison (%)";
-            displayTable(data.all_metrics);
-            renderChart(data.all_metrics);
-          } else {
-            $("noLabelMsg").style.display = "block";
-            $("resultsTable").style.display = "none";
-            $("chartTitle").textContent = "Detection Distribution Analysis";
-            renderDistribution(data.prediction_stats);
-          }
-          $("chartPlaceholder").style.display = "none";
-          $("btnPrintChart").style.display = "block";
-          $("downloadBtn").href = `${base}/download/${jobId}`;
-          $("downloadBtn").style.display = "flex";
-        }
-      } catch (e) { clearInterval(interval); }
+  async function poll(jobId) {
+    const itv = setInterval(async () => {
+      const res = await fetch(`http://localhost:8000/status/${jobId}`);
+      const data = await res.json();
+      if(data.status === "completed") {
+        clearInterval(itv);
+        $("status").textContent = "FINISHED";
+        document.querySelectorAll('.s-el, .section-sep').forEach(e => e.style.display = 'grid');
+        renderUI(data);
+      }
     }, 2000);
   }
 
-  function displayTable(metrics) {
-    const body = $("resultsBody");
-    body.innerHTML = "";
-    ["weaklink", "donpai", "combined"].forEach(id => {
-      const m = metrics[id];
-      const names = { "weaklink": "WeakLink", "donpai": "DonPai", "combined": "Hybrid (Ours)" };
-      body.innerHTML += `<tr>
-          <td class="model-name">${names[id]}</td>
-          <td class="val-highlight">${(m.accuracy * 100).toFixed(1)}%</td>
-          <td>${(m.precision * 100).toFixed(1)}%</td>
-          <td>${(m.recall * 100).toFixed(1)}%</td>
-          <td>${(m.f1_score * 100).toFixed(1)}%</td>
-      </tr>`;
-    });
-  }
+  function renderUI(data) {
+    if(data.has_ground_truth) {
+        const body = $("metricsBody"); body.innerHTML = "";
+        const models = ['weaklink', 'donpai', 'combined'];
+        models.forEach(m => {
+            const v = data.all_metrics[m];
+            body.innerHTML += `<tr><td style="font-weight:bold;">${m}</td><td class="val-highlight">${(v.accuracy*100).toFixed(1)}%</td><td>${(v.precision*100).toFixed(1)}%</td><td>${(v.recall*100).toFixed(1)}%</td><td style="color:var(--accent2); font-weight:800;">${(v.f1_score*100).toFixed(1)}%</td></tr>`;
+        });
 
-  function renderChart(metrics) {
-    const ctx = $("perfChart").getContext('2d');
-    if (myChart) myChart.destroy();
-    const models = ['weaklink', 'donpai', 'combined'];
-    myChart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: ['WeakLink', 'DonPai', 'Hybrid Model (Ours)'],
-        datasets: [
-          { label: 'Accuracy', data: models.map(id => (metrics[id].accuracy * 100).toFixed(1)), backgroundColor: '#7c3aed', borderRadius: 5 },
-          { label: 'Precision', data: models.map(id => (metrics[id].precision * 100).toFixed(1)), backgroundColor: '#22d3ee', borderRadius: 5 },
-          { label: 'Recall', data: models.map(id => (metrics[id].recall * 100).toFixed(1)), backgroundColor: '#fb7185', borderRadius: 5 },
-          { label: 'F1-Score', data: models.map(id => (metrics[id].f1_score * 100).toFixed(1)), backgroundColor: '#34d399', borderRadius: 5 }
-        ]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: { display: true, position: 'top', labels: { color: '#fff', font: { size: 12 } } },
-          datalabels: { color: '#fff', font: { weight: 'bold', size: 10 }, formatter: (v) => v + '%' }
+        const ctx = $("perfChart").getContext('2d');
+        if(charts.perf) charts.perf.destroy();
+        charts.perf = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['WeakLink', 'DonPai', 'Hybrid'],
+                datasets: [
+                    { label: 'Accuracy', data: models.map(m => (data.all_metrics[m].accuracy*100).toFixed(1)), backgroundColor: '#7c3aed' },
+                    { label: 'Precision', data: models.map(m => (data.all_metrics[m].precision*100).toFixed(1)), backgroundColor: '#22d3ee' },
+                    { label: 'Recall', data: models.map(m => (data.all_metrics[m].recall*100).toFixed(1)), backgroundColor: '#fb7185' },
+                    { label: 'F1-Score', data: models.map(m => (data.all_metrics[m].f1_score*100).toFixed(1)), backgroundColor: '#34d399' }
+                ]
+            },
+            options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{labels:{color:'#fff'}} }, scales:{ y:{ticks:{color:'#fff'}, grid:{color:'rgba(255,255,255,0.05)'}}, x:{ticks:{color:'#fff'}} } }
+        });
+    }
+
+    // Pie
+    const oData = data.prediction_stats.overlap_analysis;
+    if(charts.overlap) charts.overlap.destroy();
+    charts.overlap = new Chart($("overlapChart"), {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(oData),
+            datasets: [{ data: Object.values(oData), backgroundColor: ['#34d399', '#7c3aed', '#22d3ee', 'rgba(255,255,255,0.05)'], borderWidth:0 }]
         },
-        scales: {
-          y: { beginAtZero: true, max: 130, ticks: { display: false }, grid: { display: false } },
-          x: { ticks: { color: '#fff', font: { weight: 'bold' } }, grid: { display: false } }
-        }
-      }
+        options: { maintainAspectRatio:false, cutout:'70%', plugins:{ legend:{position:'bottom', labels:{color:'#fff', font:{size:10}}} } }
     });
-  }
 
-  function renderDistribution(stats) {
-    const ctx = $("perfChart").getContext('2d');
-    if (myChart) myChart.destroy();
-    myChart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: ['WeakLink', 'DonPai', 'Hybrid'],
-        datasets: [
-          { label: 'Malicious', data: [stats.weaklink.malicious, stats.donpai.malicious, stats.combined.malicious], backgroundColor: '#fb7185', borderRadius: 6 },
-          { label: 'Benign', data: [stats.weaklink.benign, stats.donpai.benign, stats.combined.benign], backgroundColor: '#34d399', borderRadius: 6 }
-        ]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: { display: true, labels: { color: '#fff' } },
-          datalabels: { color: '#fff', font: { weight: 'bold' } }
+    // Frequency
+    const fData = data.prediction_stats.feature_analysis;
+    if(charts.freq) charts.freq.destroy();
+    charts.freq = new Chart($("freqChart"), {
+        type: 'bar',
+        data: {
+            labels: Object.keys(fData.mal_count),
+            datasets: [
+                { label: 'Malicious Total', data: Object.values(fData.mal_count), backgroundColor: '#fb7185' },
+                { label: 'Benign Total', data: Object.values(fData.ben_count), backgroundColor: '#34d399' }
+            ]
         },
-        scales: { x: { stacked: true, ticks: { color: '#fff' } }, y: { stacked: true, ticks: { display: false } } }
-      }
+        options: { indexAxis:'y', maintainAspectRatio:false, scales:{ x:{grid:{color:'rgba(255,255,255,0.05)'}, ticks:{color:'#fff'}}, y:{ticks:{color:'#fff', font:{size:10}}} }, plugins:{legend:{labels:{color:'#fff'}}} }
     });
+
+    // Dist
+    if(charts.dist) charts.dist.destroy();
+    charts.dist = new Chart($("distChart"), {
+        type: 'bar',
+        data: {
+            labels: ['WeakLink', 'DonPai', 'Hybrid'],
+            datasets: [
+                { label: 'Malicious', data: [data.prediction_stats.weaklink.malicious, data.prediction_stats.donpai.malicious, data.prediction_stats.combined.malicious], backgroundColor: '#fb7185' },
+                { label: 'Benign', data: [data.prediction_stats.weaklink.benign, data.prediction_stats.donpai.benign, data.prediction_stats.combined.benign], backgroundColor: '#34d399' }
+            ]
+        },
+        options: { maintainAspectRatio:false, scales:{ x:{stacked:true, ticks:{color:'#fff'}}, y:{stacked:true, ticks:{color:'#fff'}} } }
+    });
+
+    $("dlBtn").href = `http://localhost:8000/download/${data.job_id}`;
+    $("dlBtn").style.display = "block";
   }
 
-  $("btnPrintChart").onclick = () => {
+  function save(id) {
     const link = document.createElement('a');
-    link.download = 'malware_analysis_report.png';
-    link.href = $("perfChart").toDataURL('image/png');
+    link.download = `${id}_export.png`;
+    link.href = $(id).toDataURL('image/png');
     link.click();
-  };
-
-  $("btnUpload").onclick = async () => {
-    const file = $("csvFile").files[0];
-    const form = new FormData();
-    form.append("file", file);
-    form.append("strategy", "combined");
-    $("btnUpload").disabled = true;
-    $("workerStatus").textContent = "Analyzing...";
-    const res = await fetch(`${base}/process_csv`, { method: "POST", body: form });
-    const data = await res.json();
-    pollStatus(data.job_id);
-  };
+  }
 
   $("btnChoose").onclick = () => $("csvFile").click();
-  $("csvFile").onchange = (e) => {
-    if(e.target.files[0]) {
-      $("fileMeta").textContent = "Ready: " + e.target.files[0].name;
-      $("btnUpload").disabled = false;
-    }
+  $("csvFile").onchange = (e) => { if(e.target.files[0]) $("btnUpload").disabled = false; };
+  $("btnUpload").onclick = async () => {
+    const f = new FormData(); f.append("file", $("csvFile").files[0]);
+    $("status").textContent = "ANALYZING...";
+    const r = await fetch("http://localhost:8000/process_csv", { method: "POST", body: f });
+    const d = await r.json();
+    poll(d.job_id);
   };
 </script>
 </body>
