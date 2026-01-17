@@ -24,23 +24,28 @@ RESULTS_DIR = Path(os.getenv("RESULTS_DIR", "/shared/results"))
 
 @celery_app.task(name="process_prediction_task")
 def process_prediction_task(
-    csv_content: bytes,
-    job_id: str,
-    strategy: str = "combined",
-    original_filename: str = "data.csv"
+        csv_content: bytes,
+        job_id: str,
+        strategy: str = "combined",
+        original_filename: str = "data.csv"
 ):
-    # Load raw data
+    # 1. Load raw data
     df_raw = processor.csv_bytes_to_raw_df(csv_content)
 
-    # Run inference across models
+    # 2. Run inference across all strategies
     all_preds = engine.predict_all(df_raw, processor)
 
     metrics_summary = {}
     prediction_stats = {}
     has_ground_truth = "label" in df_raw.columns
 
-    # Performance calculations
+    # --------------------------------------------------
+    # 3. Add Predictions to Dataframe (FIXED: Professional Naming)
+    # --------------------------------------------------
     for name, preds in all_preds.items():
+        # Add each model's prediction as a clear column (e.g., weaklink_prediction)
+        df_raw[f"{name}_prediction"] = preds
+
         mal_count = int(sum(preds))
         prediction_stats[name] = {
             "malicious": mal_count,
@@ -65,13 +70,17 @@ def process_prediction_task(
                 "f1_score": float(f1)
             }
 
+    # Identify the primary result based on user selection
+    primary_col = f"{strategy}_prediction" if f"{strategy}_prediction" in df_raw.columns else "combined_prediction"
+    # Create a clean final column for the user
+    df_raw["final_result"] = df_raw[primary_col]
+
     # --------------------------------------------------
-    # Overlap analysis (רק אם DonPai קיים)
+    # 4. Overlap & Feature Analysis (Internal)
     # --------------------------------------------------
     if "weaklink" in all_preds and "donpai" in all_preds:
         w_preds = np.array(all_preds["weaklink"])
         d_preds = np.array(all_preds["donpai"])
-
         prediction_stats["overlap_analysis"] = {
             "Both Detected": int(((w_preds == 1) & (d_preds == 1)).sum()),
             "WeakLink Only": int(((w_preds == 1) & (d_preds == 0)).sum()),
@@ -79,25 +88,17 @@ def process_prediction_task(
             "Total Benign": int(((w_preds == 0) & (d_preds == 0)).sum())
         }
 
-    # --------------------------------------------------
-    # Feature Activity Analysis (FIXED)
-    # --------------------------------------------------
-    primary = "combined_voting" if "combined_voting" in all_preds else "combined"
-    df_raw["temp_pred"] = all_preds[primary]
-
-    # ✅ רק פיצ'רים שהמודל באמת משתמש בהם
     feature_cols = [f for f in ALL_FEATURES if f in df_raw.columns]
-
-    malicious_df = df_raw[df_raw["temp_pred"] == 1]
-    benign_df = df_raw[df_raw["temp_pred"] == 0]
+    malicious_df = df_raw[df_raw["final_result"] == 1]
+    benign_df = df_raw[df_raw["final_result"] == 0]
 
     prediction_stats["feature_analysis"] = {
-        "mal_count": (malicious_df[feature_cols] > 0).sum().to_dict(),
-        "ben_count": (benign_df[feature_cols] > 0).sum().to_dict()
+        "mal_count": {k: int(v) for k, v in (malicious_df[feature_cols] > 0).sum().to_dict().items()},
+        "ben_count": {k: int(v) for k, v in (benign_df[feature_cols] > 0).sum().to_dict().items()}
     }
 
     # --------------------------------------------------
-    # Save results
+    # 5. Save Metadata and Clean CSV
     # --------------------------------------------------
     meta_path = RESULTS_DIR / f"{job_id}.json"
     with open(meta_path, "w") as f:
@@ -107,7 +108,9 @@ def process_prediction_task(
             "all_metrics": metrics_summary,
             "prediction_stats": prediction_stats,
             "job_id": job_id,
-            "original_filename": original_filename
+            "original_filename": original_filename,
+            "selected_strategy": strategy
         }, f)
 
+    # Save CSV: No more 'temp_pred', only clear, named results
     df_raw.to_csv(RESULTS_DIR / f"{job_id}.csv", index=False)

@@ -22,7 +22,6 @@
     h1 { margin:0; font-size:28px; font-weight:900; }
     h2 { font-size: 13px; color: var(--accent2); text-transform: uppercase; letter-spacing: 2px; margin-top:0; }
 
-    /* הסתרה מוחלטת של רכיבים לפני שיש תוצאות */
     .results-area { display: none; }
     .section-sep { margin: 100px 0 50px 0; padding-top: 50px; border-top: 1px solid var(--stroke); display:none; }
 
@@ -38,6 +37,9 @@
 
     .status-badge { opacity:0.6; font-weight:bold; letter-spacing:1px; border:1px solid var(--accent2); padding:6px 15px; border-radius:10px; transition: 0.3s; }
     .status-active { border-color: var(--bad); color: var(--bad); animation: pulse 1.5s infinite; }
+
+    .mode-tag { display: inline-block; padding: 4px 10px; border-radius: 8px; font-size: 10px; font-weight: bold; margin-bottom: 15px; border: 1px solid; }
+
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
   </style>
 </head>
@@ -67,16 +69,16 @@
 
       <div id="metricsCard" class="card results-area">
         <button class="save-btn" onclick="saveCard('metricsCard')">DOWNLOAD PNG</button>
-        <h2>Performance Benchmarks</h2>
+        <h2 id="metricsTitle">Analysis Results</h2>
+        <div id="modeTag" class="mode-tag"></div>
         <table class="m-table">
-          <thead><tr><th>Strategy</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1-Score</th></tr></thead>
+          <thead id="metricsHead"></thead>
           <tbody id="metricsBody"></tbody>
         </table>
-        <p id="noGroundTruth" style="display:none; color:var(--bad); font-size:12px; margin-top:10px;">* Labels not found in CSV.</p>
       </div>
     </div>
 
-    <div class="section-sep results-area"><h2>1. Model Performance (%)</h2></div>
+    <div class="section-sep results-area"><h2>1. Strategic Insight Analysis</h2></div>
     <div class="card results-area">
         <button class="save-btn" onclick="saveChart('perfChart')">DOWNLOAD PNG</button>
         <div style="height:400px;"><canvas id="perfChart"></canvas></div>
@@ -121,9 +123,9 @@
           $("status").textContent = "ANALYSIS COMPLETE";
           $("status").classList.remove("status-active");
 
-          // חשיפה של הכל רק בסיום
           document.querySelectorAll('.results-area, .section-sep').forEach(e => {
-              e.style.display = (e.id === 'chartSection2') ? 'grid' : 'block';
+              if (e.id === 'chartSection2') e.style.display = 'grid';
+              else e.style.display = 'block';
           });
 
           renderUI(data);
@@ -133,11 +135,21 @@
   }
 
   function renderUI(data) {
-    if(data.has_ground_truth) {
-        $("noGroundTruth").style.display = "none";
-        const body = $("metricsBody"); body.innerHTML = "";
-        const models = Object.keys(data.all_metrics);
+    const body = $("metricsBody");
+    const head = $("metricsHead");
+    const tag = $("modeTag");
+    body.innerHTML = "";
 
+    if(data.has_ground_truth) {
+        // Mode: Evaluation
+        $("metricsTitle").textContent = "Performance Benchmarks";
+        tag.textContent = "MODE: EVALUATION (LABELS FOUND)";
+        tag.style.borderColor = "var(--ok)";
+        tag.style.color = "var(--ok)";
+
+        head.innerHTML = `<tr><th>Strategy</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1-Score</th></tr>`;
+
+        const models = Object.keys(data.all_metrics);
         models.forEach(m => {
             const v = data.all_metrics[m];
             body.innerHTML += `<tr>
@@ -149,8 +161,44 @@
             </tr>`;
         });
 
-        if(charts.perf) charts.perf.destroy();
-        charts.perf = new Chart($("perfChart").getContext('2d'), {
+        renderMainChart(data, true);
+    } else {
+        // Mode: Prediction Intelligence
+        $("metricsTitle").textContent = "Predictive Intelligence Summary";
+        tag.textContent = "MODE: INFERENCE (LABELS MISSING)";
+        tag.style.borderColor = "var(--accent2)";
+        tag.style.color = "var(--accent2)";
+
+        head.innerHTML = `<tr><th>Strategy</th><th>Total Samples</th><th>Malicious Flags</th><th>Benign Flags</th><th>Detection Rate</th></tr>`;
+
+        const predModels = Object.keys(data.prediction_stats).filter(k => k in UI_LABELS);
+        predModels.forEach(m => {
+            const s = data.prediction_stats[m];
+            const total = s.malicious + s.benign;
+            const rate = ((s.malicious / total) * 100).toFixed(1);
+            body.innerHTML += `<tr>
+                <td style="font-weight:bold;">${UI_LABELS[m] || m}</td>
+                <td>${total}</td>
+                <td style="color:var(--bad); font-weight:bold;">${s.malicious}</td>
+                <td style="color:var(--ok);">${s.benign}</td>
+                <td class="val-highlight">${rate}%</td>
+            </tr>`;
+        });
+
+        renderMainChart(data, false);
+    }
+
+    renderSecondaryCharts(data);
+    $("dlBtn").href = `/download/${data.job_id}`;
+  }
+
+  function renderMainChart(data, isEval) {
+    if(charts.perf) charts.perf.destroy();
+    const ctx = $("perfChart").getContext('2d');
+
+    if(isEval) {
+        const models = Object.keys(data.all_metrics);
+        charts.perf = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: models.map(m => UI_LABELS[m] || m),
@@ -161,8 +209,24 @@
             },
             options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{labels:{color:'#fff'}} }, scales:{ y:{ beginAtZero:true, max:100, ticks:{color:'#fff'}, grid:{color:'rgba(255,255,255,0.05)'}}, x:{ticks:{color:'#fff'}} } }
         });
-    } else { $("noGroundTruth").style.display = "block"; }
+    } else {
+        const predModels = Object.keys(data.prediction_stats).filter(k => k in UI_LABELS);
+        charts.perf = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: predModels.map(m => UI_LABELS[m] || m),
+                datasets: [
+                    { label: 'Malicious Detected', data: predModels.map(m => data.prediction_stats[m].malicious), backgroundColor: '#fb7185' },
+                    { label: 'Benign Detected', data: predModels.map(m => data.prediction_stats[m].benign), backgroundColor: '#34d399' }
+                ]
+            },
+            options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{labels:{color:'#fff'}} }, scales:{ y:{ beginAtZero:true, ticks:{color:'#fff'}, grid:{color:'rgba(255,255,255,0.05)'}}, x:{ticks:{color:'#fff'}} } }
+        });
+    }
+  }
 
+  function renderSecondaryCharts(data) {
+    // 2. Overlap UI
     const oData = data.prediction_stats.overlap_analysis;
     if(oData) {
         if(charts.overlap) charts.overlap.destroy();
@@ -176,6 +240,7 @@
         });
     }
 
+    // 3. Feature Intensity UI
     const fData = data.prediction_stats.feature_analysis;
     if(charts.freq) charts.freq.destroy();
     charts.freq = new Chart($("freqChart"), {
@@ -190,6 +255,7 @@
         options: { indexAxis:'y', maintainAspectRatio:false, scales:{ x:{grid:{color:'rgba(255,255,255,0.05)'}, ticks:{color:'#fff'}}, y:{ticks:{color:'#fff', font:{size:10}}} }, plugins:{legend:{labels:{color:'#fff'}}} }
     });
 
+    // 4. Model Prediction Distribution
     const predModels = Object.keys(data.prediction_stats).filter(k => k in UI_LABELS);
     if(charts.dist) charts.dist.destroy();
     charts.dist = new Chart($("distChart"), {
@@ -203,8 +269,6 @@
         },
         options: { maintainAspectRatio:false, scales:{ x:{stacked:true, ticks:{color:'#fff'}}, y:{stacked:true, ticks:{color:'#fff'}} }, plugins:{legend:{labels:{color:'#fff'}}} }
     });
-
-    $("dlBtn").parentElement.href = `/download/${data.job_id}`;
   }
 
   function saveChart(id) {
@@ -220,7 +284,7 @@
     btn.style.opacity = '0';
     html2canvas(el, { backgroundColor: "#1e293b", borderRadius: 24, scale: 2 }).then(canvas => {
         const link = document.createElement('a');
-        link.download = `benchmarks.png`;
+        link.download = `analysis_summary.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
         btn.style.opacity = '1';
@@ -238,10 +302,14 @@
   $("btnUpload").onclick = async () => {
     const file = $("csvFile").files[0];
     if(!file) return;
-    const f = new FormData(); f.append("file", file);
+    const f = new FormData();
+    f.append("file", file);
+    f.append("strategy", "combined");
+
     $("status").textContent = "ANALYZING...";
     $("status").classList.add("status-active");
     $("btnUpload").disabled = true;
+
     try {
         const r = await fetch("/process_csv", { method: "POST", body: f });
         const d = await r.json();
