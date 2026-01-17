@@ -28,7 +28,12 @@
     .m-table { width: 100%; border-collapse: collapse; margin-top: 25px; }
     .m-table th { text-align: left; font-size: 11px; color: rgba(255,255,255,0.4); padding-bottom: 15px; }
     .m-table td { padding: 18px 0; border-bottom: 1px solid var(--stroke); font-size: 15px; }
-    .val-highlight { color: var(--ok); font-weight: 800; font-size: 18px; }
+
+    /* Specific metric colors for table */
+    .val-acc { color: var(--accent); font-weight: 800; }
+    .val-pre { color: var(--accent2); font-weight: 800; }
+    .val-rec { color: var(--bad); font-weight: 800; }
+    .val-f1 { color: var(--ok); font-weight: 800; }
 
     button { background: var(--accent); color:#fff; border:none; padding:15px 25px; border-radius:14px; cursor:pointer; font-weight:bold; width:100%; transition:0.2s; }
     button:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -108,8 +113,10 @@
   let charts = {};
 
   const UI_LABELS = {
-    'weaklink': 'WeakLink', 'donpai': 'DonPai',
-    'combined': 'Hybrid (XGB)', 'combined_voting': 'Voting Ensemble'
+    'weaklink': 'WeakLink',
+    'donpai': 'DonPai',
+    'combined': 'Hybrid (XGB)',
+    'combined_voting': 'Voting Ensemble'
   };
 
   async function poll(jobId) {
@@ -141,7 +148,7 @@
     body.innerHTML = "";
 
     if(data.has_ground_truth) {
-        // Mode: Evaluation
+        // Mode: Evaluation - Fully Updated with 4 metrics
         $("metricsTitle").textContent = "Performance Benchmarks";
         tag.textContent = "MODE: EVALUATION (LABELS FOUND)";
         tag.style.borderColor = "var(--ok)";
@@ -154,10 +161,10 @@
             const v = data.all_metrics[m];
             body.innerHTML += `<tr>
                 <td style="font-weight:bold;">${UI_LABELS[m] || m}</td>
-                <td class="val-highlight">${(v.accuracy*100).toFixed(1)}%</td>
-                <td>${(v.precision*100).toFixed(1)}%</td>
-                <td>${(v.recall*100).toFixed(1)}%</td>
-                <td style="color:var(--accent2); font-weight:800;">${(v.f1_score*100).toFixed(1)}%</td>
+                <td class="val-acc">${(v.accuracy*100).toFixed(1)}%</td>
+                <td class="val-pre">${(v.precision*100).toFixed(1)}%</td>
+                <td class="val-rec">${(v.recall*100).toFixed(1)}%</td>
+                <td class="val-f1">${(v.f1_score*100).toFixed(1)}%</td>
             </tr>`;
         });
 
@@ -181,7 +188,7 @@
                 <td>${total}</td>
                 <td style="color:var(--bad); font-weight:bold;">${s.malicious}</td>
                 <td style="color:var(--ok);">${s.benign}</td>
-                <td class="val-highlight">${rate}%</td>
+                <td style="color:var(--accent2); font-weight:800;">${rate}%</td>
             </tr>`;
         });
 
@@ -204,10 +211,20 @@
                 labels: models.map(m => UI_LABELS[m] || m),
                 datasets: [
                     { label: 'Accuracy', data: models.map(m => (data.all_metrics[m].accuracy*100).toFixed(1)), backgroundColor: '#7c3aed' },
+                    { label: 'Precision', data: models.map(m => (data.all_metrics[m].precision*100).toFixed(1)), backgroundColor: '#22d3ee' },
+                    { label: 'Recall', data: models.map(m => (data.all_metrics[m].recall*100).toFixed(1)), backgroundColor: '#fb7185' },
                     { label: 'F1-Score', data: models.map(m => (data.all_metrics[m].f1_score*100).toFixed(1)), backgroundColor: '#34d399' }
                 ]
             },
-            options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{labels:{color:'#fff'}} }, scales:{ y:{ beginAtZero:true, max:100, ticks:{color:'#fff'}, grid:{color:'rgba(255,255,255,0.05)'}}, x:{ticks:{color:'#fff'}} } }
+            options: {
+              responsive:true,
+              maintainAspectRatio:false,
+              plugins:{ legend:{labels:{color:'#fff', font:{size:12}}} },
+              scales:{
+                y:{ beginAtZero:true, max:100, ticks:{color:'#fff'}, grid:{color:'rgba(255,255,255,0.05)'}},
+                x:{ticks:{color:'#fff'}}
+              }
+            }
         });
     } else {
         const predModels = Object.keys(data.prediction_stats).filter(k => k in UI_LABELS);
