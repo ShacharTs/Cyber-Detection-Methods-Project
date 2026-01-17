@@ -81,6 +81,37 @@ Training logs, evaluation results, and performance metrics.
 ### Static Assets
 Generated diagrams and supporting documentation.
 
+## ⚙️ System Architecture
+
+The system runs as **multiple coordinated services** managed by **Docker Compose**.
+
+### Runtime Components
+
+#### API Service
+- Receives requests
+- Triggers scans, training, and evaluations
+- Dispatches tasks to the worker
+
+#### Worker Service
+- Executes long-running and CPU-intensive jobs
+- Runs feature extraction, dataset processing, and ML training
+- Operates asynchronously in the background
+
+#### Message Broker (Redis)
+- Connects the API and worker
+- Queues tasks for execution
+
+---
+
+## 🔄 How the Worker Runs (Important)
+
+The worker is **not started manually**.
+
+When running:
+```bash
+docker-compose up --build
+```
+
 ---
 
 ## 🚀 Getting Started
