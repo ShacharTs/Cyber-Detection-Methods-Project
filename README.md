@@ -132,6 +132,29 @@ Dataset-With-Code
 ```bash
 docker-compose up --build
 ```
+
+## 📦 Requirements
+
+This project is implemented in **Python** and relies on the following core libraries and services.
+
+### Python Dependencies
+
+All required Python packages are listed in `requirements.txt` and are installed automatically when building the Docker image.
+
+```txt
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+pandas==2.2.3
+numpy==2.1.3
+joblib==1.4.2
+python-multipart==0.0.12
+xgboost==2.1.4
+scikit-learn==1.6.0
+celery==5.4.0
+redis==5.2.1
+docker==7.1.0
+```
+
 ## 👥 Authors
 
 - **Shachar Tsrafati**
