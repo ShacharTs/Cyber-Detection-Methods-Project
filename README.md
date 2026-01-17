@@ -5,6 +5,16 @@ The system applies machine learning techniques to detect **malware-as-a-package*
 
 ---
 
+## 🔗 Project Link
+
+The complete and up-to-date project source code and documentation are available at:
+
+https://github.com/ShacharTs/Cyber-Detection-Methods-Project/tree/added_docker_V2
+
+---
+
+
+
 ## 📖 Project Overview
 
 This project focuses on modern cyber detection methods targeting threats within the **Node Package Manager (NPM)** ecosystem.  
@@ -155,8 +165,8 @@ redis==5.2.1
 docker==7.1.0
 ```
 
+
 ## 👥 Authors
 
 - **Shachar Tsrafati**
 - **Eitan Beriy**
-
